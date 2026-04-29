@@ -2,6 +2,7 @@
 
 
 #include "Components/POSTTemperatureComponent.h"
+#include "POSTLog.h"
 
 // Sets default values for this component's properties
 UPOSTTemperatureComponent::UPOSTTemperatureComponent()
@@ -19,7 +20,7 @@ void UPOSTTemperatureComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
+	CurrentTemperature = MaxTemperature;
 	
 }
 
@@ -29,6 +30,25 @@ void UPOSTTemperatureComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// ...
+	if (bIsInWarmZone)
+		CurrentTemperature -= CoolingRate * DeltaTime;
+
+	else
+		CurrentTemperature += HeatingRate * DeltaTime;
+
+	CurrentTemperature = FMath::Clamp(CurrentTemperature, MinTemterature, MaxTemperature);
+
+	if (CurrentTemperature == MaxTemperature)
+		UE_LOG(LogPOST, Log, TEXT("Temperature = %f"), CurrentTemperature)
+}
+
+void UPOSTTemperatureComponent::SetInWarmZone(bool bIsZone)
+{
+	bIsInWarmZone = bIsZone;
+}
+
+float UPOSTTemperatureComponent::GetCurrentTemperature()
+{
+	return CurrentTemperature;
 }
 

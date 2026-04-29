@@ -6,6 +6,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Actor/FlashLightItem.h"
 #include "Components/POSTMovementComponent.h"
+#include "Components/POSTTemperatureComponent.h"
+#include "POSTLog.h"
+
 //DEFINE_LOG_CATEGORY_STATIC(LogPOST, Display, All)
 
 // Sets default values
@@ -26,6 +29,8 @@ APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
 	FlashlightAttachPoint->SetupAttachment(Camera);
 	
 	FlashlightActor = nullptr;
+
+	TemperatureComponent = CreateDefaultSubobject<UPOSTTemperatureComponent>(TEXT("TemperatureComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -102,9 +107,13 @@ bool APOSTCharacter::IsRunning() const
 	return WantsToRun && IsMovingForward && !GetVelocity().IsZero();
 }
 
+UPOSTTemperatureComponent* APOSTCharacter::GetTemperatureComponent() const
+{
+	return TemperatureComponent;
+}
+
 void APOSTCharacter::OnStartRunning()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Start Run"))
 	WantsToRun = true;
 }
 

@@ -1,0 +1,3 @@
+#include "POSTLog.h"
+
+DEFINE_LOG_CATEGORY(LogPOST);

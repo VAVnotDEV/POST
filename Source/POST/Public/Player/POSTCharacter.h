@@ -10,6 +10,7 @@
 
 
 class AFlashLightItem;
+class UPOSTTemperatureComponent;
 
 UCLASS()
 class POST_API APOSTCharacter : public ACharacter
@@ -51,6 +52,8 @@ public:
 
 	bool IsRunning() const;
 
+	UPOSTTemperatureComponent* GetTemperatureComponent() const;
+
 private:
 	void MoveForward(float Amount);
 	void MoveRight(float Amount);
@@ -60,4 +63,8 @@ private:
 
 	void OnStartRunning();
 	void OnStopRunning();
+
+	UPROPERTY(EditAnywhere, Category = "Component")
+	UPOSTTemperatureComponent* TemperatureComponent;
+	
 };
