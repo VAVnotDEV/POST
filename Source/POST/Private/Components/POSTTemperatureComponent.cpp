@@ -31,15 +31,14 @@ void UPOSTTemperatureComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	if (bIsInWarmZone)
-		CurrentTemperature -= CoolingRate * DeltaTime;
+		CurrentTemperature += HeatingRate * DeltaTime;
 
 	else
-		CurrentTemperature += HeatingRate * DeltaTime;
+		CurrentTemperature -= CoolingRate * DeltaTime;
 
 	CurrentTemperature = FMath::Clamp(CurrentTemperature, MinTemterature, MaxTemperature);
 
-	if (CurrentTemperature == MaxTemperature)
-		UE_LOG(LogPOST, Log, TEXT("Temperature = %f"), CurrentTemperature)
+		//UE_LOG(LogPOST, Log, TEXT("Temperature = %f"), CurrentTemperature)
 }
 
 void UPOSTTemperatureComponent::SetInWarmZone(bool bIsZone)

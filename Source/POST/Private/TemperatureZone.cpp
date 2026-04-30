@@ -16,27 +16,12 @@ ATemperatureZone::ATemperatureZone()
 	Box = CreateDefaultSubobject<UBoxComponent>("BoxComponent");
 	SetRootComponent(Box);
 
-	//Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	//Box->SetCollisionObjectType(ECC_WorldDynamic);
-	//Box->SetCollisionResponseToAllChannels(ECR_Ignore);
-	//Box->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
-	//Box->SetGenerateOverlapEvents(true);
+	Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	Box->SetCollisionObjectType(ECC_WorldDynamic);
+	Box->SetCollisionResponseToAllChannels(ECR_Ignore);
+	Box->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	Box->SetGenerateOverlapEvents(true);
 
-	//TArray<AActor*> OverlappingActors;
-	//Box->GetOverlappingActors(OverlappingActors, APOSTCharacter::StaticClass());
-
-	//for (AActor* Actor : OverlappingActors)
-	//{
-	//	APOSTCharacter* Character = Cast<APOSTCharacter>(Actor);
-	//	if (!Character) continue;
-
-	//	UPOSTTemperatureComponent* TempComp = Character->GetTemperatureComponent();
-	//	if (!TempComp) continue;
-
-	//	TempComp->SetInWarmZone(true);
-
-	//	UE_LOG(LogPOST, Display, TEXT("[Temperature] Player already inside warm zone"));
-	//}
 }
 
 // Called when the game starts or when spawned
@@ -46,6 +31,11 @@ void ATemperatureZone::BeginPlay()
 
 	Box->OnComponentBeginOverlap.AddDynamic(this, &ATemperatureZone::OnBeginOverlap);
 	Box->OnComponentEndOverlap.AddDynamic(this, &ATemperatureZone::OnEndOverlap);
+
+	GetWorld()->GetTimerManager().SetTimerForNextTick(
+		this,
+		&ATemperatureZone::CheckInitialOverlaps
+	);
 }
 
 void ATemperatureZone::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -74,6 +64,30 @@ void ATemperatureZone::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AA
 	if (!TempComp) return;
 
 	TempComp->SetInWarmZone(false);
+}
+
+void ATemperatureZone::CheckInitialOverlaps()
+{
+	TArray<AActor*> OverlappingActors;
+
+	Box->GetOverlappingActors(
+		OverlappingActors,
+		APOSTCharacter::StaticClass()
+	);
+
+	for (AActor* Actor : OverlappingActors)
+	{
+		APOSTCharacter* Character = Cast<APOSTCharacter>(Actor);
+		if (!Character) continue;
+
+		UPOSTTemperatureComponent* TempComp = Character->GetTemperatureComponent();
+		if (!TempComp) continue;
+
+		TempComp->SetInWarmZone(true);
+
+		UE_LOG(LogPOST, Display, TEXT("[Temperature] Player already inside warm zone"));
+	}
+
 }
 
 
