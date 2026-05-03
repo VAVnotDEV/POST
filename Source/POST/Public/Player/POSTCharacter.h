@@ -61,6 +61,8 @@ private:
 	bool IsMovingForward = false;
 	bool WantsToRun = false;
 
+	bool IsIfFrozen = false;
+
 	void OnStartRunning();
 	void OnStopRunning();
 
