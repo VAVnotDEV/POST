@@ -1,5 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright (c) 2026 VAVnotDev. All Rights Reserved.
 
 #include "Player/POSTCharacter.h"
 #include "Interfaces/Interactable.h"
@@ -7,6 +6,7 @@
 #include "Actor/FlashLightItem.h"
 #include "Components/POSTMovementComponent.h"
 #include "Components/POSTTemperatureComponent.h"
+#include "Components/POSTStaminaComponent.h"
 #include "POSTLog.h"
 
 //DEFINE_LOG_CATEGORY_STATIC(LogPOST, Display, All)
@@ -31,6 +31,7 @@ APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
 	FlashlightActor = nullptr;
 
 	TemperatureComponent = CreateDefaultSubobject<UPOSTTemperatureComponent>(TEXT("TemperatureComponent"));
+	StaminaComponent = CreateDefaultSubobject<UPOSTStaminaComponent>(TEXT("StaminaComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -105,12 +106,17 @@ void APOSTCharacter::ToggleFlashlight()
 
 bool APOSTCharacter::IsRunning() const
 {
-	return WantsToRun && IsMovingForward && !GetVelocity().IsZero();
+	return WantsToRun && IsMovingForward && !GetVelocity().IsZero() && StaminaComponent->CanRun();
 }
 
 UPOSTTemperatureComponent* APOSTCharacter::GetTemperatureComponent() const
 {
 	return TemperatureComponent;
+}
+
+UPOSTStaminaComponent* APOSTCharacter::GetStaminaComponent() const
+{
+	return StaminaComponent;
 }
 
 void APOSTCharacter::OnStartRunning()

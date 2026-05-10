@@ -1,4 +1,4 @@
-/// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright (c) 2026 VAVnotDev. All Rights Reserved.
 
 #pragma once
 
@@ -11,6 +11,7 @@
 
 class AFlashLightItem;
 class UPOSTTemperatureComponent;
+class UPOSTStaminaComponent;
 
 UCLASS()
 class POST_API APOSTCharacter : public ACharacter
@@ -53,6 +54,7 @@ public:
 	bool IsRunning() const;
 
 	UPOSTTemperatureComponent* GetTemperatureComponent() const;
+	UPOSTStaminaComponent* GetStaminaComponent() const;
 
 private:
 	void MoveForward(float Amount);
@@ -61,12 +63,15 @@ private:
 	bool IsMovingForward = false;
 	bool WantsToRun = false;
 
-	bool IsIfFrozen = false;
+	bool bIsFrozen = false;
 
 	void OnStartRunning();
 	void OnStopRunning();
 
 	UPROPERTY(EditAnywhere, Category = "Component")
 	UPOSTTemperatureComponent* TemperatureComponent;
+
+	UPROPERTY(EditAnywhere, Category = "Components")
+	UPOSTStaminaComponent* StaminaComponent;
 	
 };
