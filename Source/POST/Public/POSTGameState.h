@@ -7,7 +7,8 @@
 #include "POSTGameState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHourChanged, int32, NewHour);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMinuteChanged, int, NewMinute);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMinuteChanged, int32, NewMinute);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTimeChanged, int32, Hours, int32, Minutes);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnNightStarted);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDayStarted);
 
@@ -31,6 +32,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "POST Time")
 	FOnDayStarted OnDayStarted;
 
+	UPROPERTY(BlueprintAssignable, Category = "POST Time")
+	FOnTimeChanged OnTimeChanged;
+
 	int32 GetHours() const { return Hours; }
 	int32 GetMinutes() const { return Minutes; }
 	int32 GetSeconds() const { return Seconds; }
@@ -52,7 +56,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "POST Time")
 	int32 Seconds = 0;
 
-	UPROPERTY(EditAnywhere, Category = "POSt Time")
+	UPROPERTY(EditAnywhere, Category = "POST Time")
 	float TimeScale = 60.0f;
 
 	float AccumulateRealSeconds = 0.0f;

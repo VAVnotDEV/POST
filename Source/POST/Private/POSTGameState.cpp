@@ -24,7 +24,6 @@ void APOSTGameState::Tick(float DeltaTime)
 		AccumulateRealSeconds -= 1.0f;
 		AddGameSecond();
 	}
-
 }
 
 void APOSTGameState::BeginPlay()
@@ -45,6 +44,7 @@ void APOSTGameState::AddGameSecond()
 		Minutes++;
 
 		OnMinuteChanged.Broadcast(Minutes);
+		OnTimeChanged.Broadcast(Hours, Minutes);
 	}
 
 	if (Minutes >= 60)
@@ -65,4 +65,16 @@ void APOSTGameState::AddGameSecond()
 void APOSTGameState::CheckDayNightState()
 {
 	const bool bNowNight = IsNight();
+
+	if (bNowNight && !bIsNight)
+	{
+		bIsNight = true;
+		OnNightStarted.Broadcast();
+	}
+
+	else if (!bNowNight && bIsNight)
+	{
+		bIsNight = false;
+		OnDayStarted.Broadcast();
+	}
 }
