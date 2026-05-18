@@ -65,6 +65,6 @@ void UPOSTStaminaComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 
 	CurrentStamina = FMath::Clamp(CurrentStamina, MinStamina, MaxStamina);
 
-	UE_LOG(LogPOST, Display, TEXT("Stamina: %f"), CurrentStamina)
+	//UE_LOG(LogPOST, Display, TEXT("Stamina: %f"), CurrentStamina)
 }
 

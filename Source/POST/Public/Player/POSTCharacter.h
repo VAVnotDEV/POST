@@ -9,9 +9,11 @@
 #include "POSTCharacter.generated.h"
 
 
+
 class AFlashLightItem;
 class UPOSTTemperatureComponent;
 class UPOSTStaminaComponent;
+class UTextRenderComponent;
 
 UCLASS()
 class POST_API APOSTCharacter : public ACharacter
@@ -24,13 +26,13 @@ public:
 
 protected:
 	// Called when the game starts or when spawned
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UCameraComponent* Camera;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Capsule")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UCapsuleComponent* Capsule;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FlashLight")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class USceneComponent* FlashlightAttachPoint;
 
 	UPROPERTY(EditDefaultsOnly, Category = "FlashLight")
@@ -38,11 +40,19 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FlashLight")
 	 AFlashLightItem* FlashlightActor;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UTextRenderComponent* StaminaTextComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UTextRenderComponent* TemperaturaTextComponent;
+
+	 UFUNCTION(BlueprintCallable)
+	 void ToggleFlashlight();
 
 	virtual void BeginPlay() override;
 
-	UFUNCTION(BlueprintCallable)
-	void ToggleFlashlight();
+
 	
 public:	
 	// Called every frame

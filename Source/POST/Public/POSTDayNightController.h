@@ -55,8 +55,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	FRotator SunDayPosition = FRotator(90.0f, 0.0f, 0.0f);
-	FRotator SunNightPosition = FRotator(-45.0f, 0.0f, 0.0f);
+	FRotator SunDayPosition = FRotator(0.0f, 90.0f, 0.0f);
+	FRotator SunNightPosition = FRotator(0.0f, -45.0f, 0.0f);
 	
 	float ExposureDay = 1.0f;
 	float ExposureNight = -1.0f;

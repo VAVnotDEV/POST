@@ -8,6 +8,7 @@
 #include "Components/POSTTemperatureComponent.h"
 #include "Components/POSTStaminaComponent.h"
 #include "POSTLog.h"
+#include "Components/TextRenderComponent.h"
 
 //DEFINE_LOG_CATEGORY_STATIC(LogPOST, Display, All)
 
@@ -16,7 +17,7 @@ APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
 	: Super(ObjInit.SetDefaultSubobjectClass<UPOSTMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
  	// Set this character to call Tick() every frame. You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 88.f);
 	
@@ -32,6 +33,13 @@ APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
 
 	TemperatureComponent = CreateDefaultSubobject<UPOSTTemperatureComponent>(TEXT("TemperatureComponent"));
 	StaminaComponent = CreateDefaultSubobject<UPOSTStaminaComponent>(TEXT("StaminaComponent"));
+
+	StaminaTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("StaminaTextComponent"));
+	StaminaTextComponent->SetupAttachment(GetRootComponent());
+
+	TemperaturaTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("TemperaturaTextComponent"));
+	TemperaturaTextComponent->SetupAttachment(GetRootComponent());
+
 }
 
 // Called when the game starts or when spawned
@@ -45,6 +53,13 @@ void APOSTCharacter::BeginPlay()
 void APOSTCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	const auto Stamina = StaminaComponent->GetCurrentStamina();
+	const auto Temperatura = TemperatureComponent->GetCurrentTemperature();
+	StaminaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Stamina: %.0f"), Stamina)));
+	TemperaturaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Temp: %.0f"), Temperatura)));
+
+	
 }
 
 // Called to bind functionality to input
