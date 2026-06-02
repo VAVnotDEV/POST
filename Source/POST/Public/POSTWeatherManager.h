@@ -36,4 +36,5 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	float GetOutdoorTemperature() const;
+	void UpdateOutdoorTemperature();
 };

@@ -28,8 +28,8 @@ void APOSTDayNightController::Day()
 {
 	PostProcess->Settings.AutoExposureBias = ExposureDay;
 	DirectionalLight->SetActorRotation(SunDayPosition);
-	DirectionalLight->GetLightComponent()->SetIntensity(LightDayIntensity);
-	SkyLight->GetLightComponent()->SetIntensity(LightDayIntensity);
+	DirectionalLight->GetLightComponent()->SetIntensity(DirectionLightDayIntensity);
+	SkyLight->GetLightComponent()->SetIntensity(SkyLightDayIntensity);
 	HeightFog->GetComponent()->SetVisibility(true);
 }
 

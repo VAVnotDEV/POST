@@ -61,7 +61,8 @@ private:
 	float ExposureDay = 1.0f;
 	float ExposureNight = -1.0f;
 	
-	float LightDayIntensity = 1.0f;
+	float DirectionLightDayIntensity = 2.0f;
+	float SkyLightDayIntensity = 1.0f;
 	float LightNightIntensity = 0.0f;
 
 };

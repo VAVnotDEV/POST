@@ -1,6 +1,5 @@
 // Copyright (c) 2026 VAVnotDev. All Rights Reserved.
 
-
 #include "POSTTemperatureDisplay.h"
 #include "POSTWeatherManager.h"
 #include "Kismet/GameplayStatics.h"
@@ -41,6 +40,8 @@ void APOSTTemperatureDisplay::BeginPlay()
 	{
 		UE_LOG(LogPOST, Warning, TEXT("TempDisplay: WeatherManager-Have"))
 		WeatherManager->OnTemperatureChanged.AddUObject(this, &APOSTTemperatureDisplay::HandleTemperatureChanged);
+
+		HandleTemperatureChanged(WeatherManager->GetOutdoorTemperature());
 	}
 }
 
@@ -48,6 +49,5 @@ void APOSTTemperatureDisplay::BeginPlay()
 void APOSTTemperatureDisplay::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 

@@ -5,6 +5,7 @@
 #include "POSTGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "POSTLog.h"
+#include "TimerManager.h"
 
 // Sets default values
 APOSTWeatherManager::APOSTWeatherManager()
@@ -18,7 +19,9 @@ APOSTWeatherManager::APOSTWeatherManager()
 void APOSTWeatherManager::BeginPlay()
 {
 	Super::BeginPlay();
-	GetOutdoorTemperature();
+
+	FTimerHandle TimerHandle;
+	//GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &APOSTWeatherManager::UpdateOutdoorTemperature, 2.0f, false);
 	
 }
 
@@ -44,9 +47,15 @@ float APOSTWeatherManager::GetOutdoorTemperature() const
 	else
 		result = BaseTemperature + DayModifier;
 
-	UE_LOG(LogPOST, Display, TEXT("WM: %f"), result)
-	OnTemperatureChanged.Broadcast(result);
+
 
 	return result;
+}
+
+void APOSTWeatherManager::UpdateOutdoorTemperature()
+{
+	float temp = GetOutdoorTemperature();
+	UE_LOG(LogPOST, Display, TEXT("WM: %f"), temp)
+		OnTemperatureChanged.Broadcast(temp);
 }
 
