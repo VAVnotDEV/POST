@@ -10,6 +10,7 @@
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/PostProcessComponent.h"
 #include "Components/DirectionalLightComponent.h"
+#include "POSTLog.h"
 
 // Sets default values
 APOSTDayNightController::APOSTDayNightController()
@@ -31,6 +32,7 @@ void APOSTDayNightController::Day()
 	DirectionalLight->GetLightComponent()->SetIntensity(DirectionLightDayIntensity);
 	SkyLight->GetLightComponent()->SetIntensity(SkyLightDayIntensity);
 	HeightFog->GetComponent()->SetVisibility(true);
+	UE_LOG(LogPOST, Display, TEXT(""))
 }
 
 void APOSTDayNightController::Night()

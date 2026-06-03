@@ -58,10 +58,10 @@ private:
 	FRotator SunDayPosition = FRotator(0.0f, 90.0f, 0.0f);
 	FRotator SunNightPosition = FRotator(0.0f, -45.0f, 0.0f);
 	
-	float ExposureDay = 1.0f;
+	float ExposureDay = 0.0f;
 	float ExposureNight = -1.0f;
 	
-	float DirectionLightDayIntensity = 2.0f;
+	float DirectionLightDayIntensity = 5.0f;
 	float SkyLightDayIntensity = 1.0f;
 	float LightNightIntensity = 0.0f;
 
