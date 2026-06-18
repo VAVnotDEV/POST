@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "POSTAnomalyDirector.generated.h"
 
+class APOSTEntityPresence;
+
 UCLASS()
 class POST_API APOSTAnomalyDirector : public AActor
 {
@@ -19,8 +21,12 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+private:
+	void TryActivateAnomaly();
+
+	FTimerHandle AnomalyTimerHandle;
+
+	UPROPERTY()
+	APOSTEntityPresence* EntityPresence;
 
 };

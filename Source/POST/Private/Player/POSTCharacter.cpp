@@ -7,8 +7,11 @@
 #include "Components/POSTMovementComponent.h"
 #include "Components/POSTTemperatureComponent.h"
 #include "Components/POSTStaminaComponent.h"
-#include "POSTLog.h"
 #include "Components/TextRenderComponent.h"
+#include "Components/POSTEntityAudioComponent.h"
+#include "POSTLog.h"
+
+#include "DrawDebugHelpers.h"
 
 //DEFINE_LOG_CATEGORY_STATIC(LogPOST, Display, All)
 
@@ -40,6 +43,7 @@ APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
 	TemperaturaTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("TemperaturaTextComponent"));
 	TemperaturaTextComponent->SetupAttachment(GetRootComponent());
 
+	EntityAudioComponent = CreateDefaultSubobject<UPOSTEntityAudioComponent>(TEXT("EntityAudioComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -53,6 +57,8 @@ void APOSTCharacter::BeginPlay()
 void APOSTCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	UpdateInteractActor();
 
 	const auto Stamina = StaminaComponent->GetCurrentStamina();
 	const auto Temperatura = TemperatureComponent->GetCurrentTemperature();
@@ -75,7 +81,7 @@ void APOSTCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAction("Flashlight", IE_Pressed, this, &APOSTCharacter::ToggleFlashlight);
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &APOSTCharacter::OnStartRunning);
 	PlayerInputComponent->BindAction("Run", IE_Released, this, &APOSTCharacter::OnStopRunning);
-	//PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APOSTCharacter::TryInteract);
+	PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APOSTCharacter::TryInteract);
 	
 }
 
@@ -142,4 +148,92 @@ void APOSTCharacter::OnStartRunning()
 void APOSTCharacter::OnStopRunning()
 {
 	WantsToRun = false;
+}
+
+void APOSTCharacter::UpdateInteractActor()
+{
+	CurrentInteractActor = nullptr;
+
+	if (!Camera)
+	{
+		return;
+	}
+
+	const FVector Start = Camera->GetComponentLocation();
+	const FVector End = Start + Camera->GetForwardVector() * InteractDistance;
+
+	FHitResult HitResult;
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		Start,
+		End,
+		ECC_Visibility,
+		Params
+	);
+
+	DrawDebugLine(
+		GetWorld(),
+		Start,
+		End,
+		bHit ? FColor::Green : FColor::Red,
+		false,
+		0.0f,
+		0,
+		1.0f
+	);
+
+	if (!bHit)
+	{
+		return;
+	}
+
+	AActor* HitActor = HitResult.GetActor();
+
+	if (!HitActor)
+	{
+		return;
+	}
+
+	if (!HitActor->GetClass()->ImplementsInterface(UInteractable::StaticClass()))
+	{
+		return;
+	}
+
+	if (!IInteractable::Execute_CanInteract(HitActor, this))
+	{
+		return;
+	}
+
+	CurrentInteractActor = HitActor;
+
+	const FText InteractText =
+		IInteractable::Execute_GetInteractText(HitActor, this);
+
+	UE_LOG(LogTemp, Warning, TEXT("Interact: %s"), *InteractText.ToString());
+}
+
+void APOSTCharacter::TryInteract()
+{
+	if (!CurrentInteractActor)
+	{
+		return;
+	}
+
+	if (!CurrentInteractActor->GetClass()->ImplementsInterface(UInteractable::StaticClass()))
+	{
+		return;
+	}
+
+	const bool bCanInteract = IInteractable::Execute_CanInteract(CurrentInteractActor, this);
+
+	if (!bCanInteract)
+	{
+		return;
+	}
+
+	IInteractable::Execute_Interact(CurrentInteractActor, this);
 }

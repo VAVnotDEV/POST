@@ -2,6 +2,9 @@
 
 
 #include "Components/POSTEntityAudioComponent.h"
+#include "EntityMonster/POSTEntityPresence.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/AudioComponent.h"
 
 // Sets default values for this component's properties
 UPOSTEntityAudioComponent::UPOSTEntityAudioComponent()
@@ -19,7 +22,20 @@ void UPOSTEntityAudioComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
+    EntityPresence = Cast<APOSTEntityPresence>(
+        UGameplayStatics::GetActorOfClass(GetWorld(), APOSTEntityPresence::StaticClass())
+    );
+
+    if (PresenceLoopSound)
+    {
+        AudioComponent = UGameplayStatics::SpawnSound2D(
+            GetWorld(),
+            PresenceLoopSound,
+            0.0f,
+            1.0f,
+            0.0f
+        );
+    }
 	
 }
 
@@ -29,6 +45,14 @@ void UPOSTEntityAudioComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// ...
+    if (!AudioComponent || !EntityPresence) return;
+
+    const float Threat = EntityPresence->GetThreatLevel();
+
+    const float Volume = FMath::Lerp(0.0f, 0.8f, Threat);
+    const float Pitch = FMath::Lerp(0.85f, 1.25f, Threat);
+
+    AudioComponent->SetVolumeMultiplier(Volume);
+    AudioComponent->SetPitchMultiplier(Pitch);
 }
 

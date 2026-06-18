@@ -14,6 +14,7 @@ class AFlashLightItem;
 class UPOSTTemperatureComponent;
 class UPOSTStaminaComponent;
 class UTextRenderComponent;
+class UPOSTEntityAudioComponent;
 
 UCLASS()
 class POST_API APOSTCharacter : public ACharacter
@@ -46,6 +47,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	UTextRenderComponent* TemperaturaTextComponent;
+
+	UPROPERTY(VisibleAnywhere)
+	UPOSTEntityAudioComponent* EntityAudioComponent;
 
 	 UFUNCTION(BlueprintCallable)
 	 void ToggleFlashlight();
@@ -83,5 +87,15 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Components")
 	UPOSTStaminaComponent* StaminaComponent;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Interact")
+	float InteractDistance = 300.0f;
+
+	UPROPERTY()
+	AActor* CurrentInteractActor = nullptr;
+
+	void UpdateInteractActor();
+
+	void TryInteract();
 	
 };

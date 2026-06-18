@@ -2,7 +2,7 @@
 
 
 #include "EntityMonster/POSTEntityPresence.h"
-
+#include "Kismet/GameplayStatics.h"
 // Sets default values
 APOSTEntityPresence::APOSTEntityPresence()
 {
@@ -15,13 +15,19 @@ APOSTEntityPresence::APOSTEntityPresence()
 void APOSTEntityPresence::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
 }
 
 // Called every frame
 void APOSTEntityPresence::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (!PlayerPawn) return;
+
+	const float Distance = FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
+
+	ThreatLevel = 1.0f - FMath::Clamp(Distance / MaxDistance, 0.0f, 1.0f);
 
 }
 

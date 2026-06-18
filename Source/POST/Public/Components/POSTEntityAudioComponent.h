@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "POSTEntityAudioComponent.generated.h"
 
+class APOSTEntityPresence;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class POST_API UPOSTEntityAudioComponent : public UActorComponent
@@ -24,5 +25,14 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+private:
+	UPROPERTY(EditAnywhere)
+	USoundBase* PresenceLoopSound;
+
+	UPROPERTY()
+	UAudioComponent* AudioComponent;
+
+	UPROPERTY()
+	APOSTEntityPresence* EntityPresence;
 		
 };

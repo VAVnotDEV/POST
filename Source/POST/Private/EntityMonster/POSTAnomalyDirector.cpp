@@ -2,6 +2,8 @@
 
 
 #include "EntityMonster/POSTAnomalyDirector.h"
+#include "Kismet/GameplayStatics.h"
+#include "EntityMonster/POSTEntityPresence.h"
 
 // Sets default values
 APOSTAnomalyDirector::APOSTAnomalyDirector()
@@ -16,12 +18,35 @@ void APOSTAnomalyDirector::BeginPlay()
 {
 	Super::BeginPlay();
 	
+    EntityPresence = Cast<APOSTEntityPresence>(
+        UGameplayStatics::GetActorOfClass(GetWorld(), APOSTEntityPresence::StaticClass())
+    );
+
+    GetWorldTimerManager().SetTimer(
+        AnomalyTimerHandle,
+        this,
+        &APOSTAnomalyDirector::TryActivateAnomaly,
+        5.0f,
+        true
+    );
 }
 
-// Called every frame
-void APOSTAnomalyDirector::Tick(float DeltaTime)
+void APOSTAnomalyDirector::TryActivateAnomaly()
 {
-	Super::Tick(DeltaTime);
+    if (!EntityPresence) return;
 
+    const float Threat = EntityPresence->GetThreatLevel();
+
+    if (Threat < 0.4f) return;
+
+    const float Roll = FMath::FRand();
+
+    if (Roll < Threat)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Anomaly activated. Threat: %f"), Threat);
+
+        // Потом здесь будет выбор APOSTAnomalyBase
+    }
 }
+
 
