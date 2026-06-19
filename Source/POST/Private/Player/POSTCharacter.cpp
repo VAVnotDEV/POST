@@ -9,9 +9,10 @@
 #include "Components/POSTStaminaComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Components/POSTEntityAudioComponent.h"
+#include "Components/POSTInteractionComponent.h"
 #include "POSTLog.h"
 
-#include "DrawDebugHelpers.h"
+
 
 //DEFINE_LOG_CATEGORY_STATIC(LogPOST, Display, All)
 
@@ -44,6 +45,8 @@ APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
 	TemperaturaTextComponent->SetupAttachment(GetRootComponent());
 
 	EntityAudioComponent = CreateDefaultSubobject<UPOSTEntityAudioComponent>(TEXT("EntityAudioComponent"));
+
+	InteractionComponent = CreateDefaultSubobject<UPOSTInteractionComponent>(TEXT("InteractionComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -51,6 +54,8 @@ void APOSTCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	SpawnFlashlight();
+	OnBodyTemperatureChanged(TemperatureComponent->GetCurrentTemperature());
+	TemperatureComponent->OnBodyTemperatureChanged.AddUObject(this, &APOSTCharacter::OnBodyTemperatureChanged);
 }
 
 // Called every frame
@@ -58,13 +63,8 @@ void APOSTCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	UpdateInteractActor();
-
 	const auto Stamina = StaminaComponent->GetCurrentStamina();
-	const auto Temperatura = TemperatureComponent->GetCurrentTemperature();
 	StaminaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Stamina: %.0f"), Stamina)));
-	TemperaturaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Temp: %.0f"), Temperatura)));
-
 	
 }
 
@@ -150,90 +150,16 @@ void APOSTCharacter::OnStopRunning()
 	WantsToRun = false;
 }
 
-void APOSTCharacter::UpdateInteractActor()
-{
-	CurrentInteractActor = nullptr;
-
-	if (!Camera)
-	{
-		return;
-	}
-
-	const FVector Start = Camera->GetComponentLocation();
-	const FVector End = Start + Camera->GetForwardVector() * InteractDistance;
-
-	FHitResult HitResult;
-
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(this);
-
-	const bool bHit = GetWorld()->LineTraceSingleByChannel(
-		HitResult,
-		Start,
-		End,
-		ECC_Visibility,
-		Params
-	);
-
-	DrawDebugLine(
-		GetWorld(),
-		Start,
-		End,
-		bHit ? FColor::Green : FColor::Red,
-		false,
-		0.0f,
-		0,
-		1.0f
-	);
-
-	if (!bHit)
-	{
-		return;
-	}
-
-	AActor* HitActor = HitResult.GetActor();
-
-	if (!HitActor)
-	{
-		return;
-	}
-
-	if (!HitActor->GetClass()->ImplementsInterface(UInteractable::StaticClass()))
-	{
-		return;
-	}
-
-	if (!IInteractable::Execute_CanInteract(HitActor, this))
-	{
-		return;
-	}
-
-	CurrentInteractActor = HitActor;
-
-	const FText InteractText =
-		IInteractable::Execute_GetInteractText(HitActor, this);
-
-	UE_LOG(LogTemp, Warning, TEXT("Interact: %s"), *InteractText.ToString());
-}
 
 void APOSTCharacter::TryInteract()
 {
-	if (!CurrentInteractActor)
-	{
-		return;
-	}
+	if (!InteractionComponent) return;
 
-	if (!CurrentInteractActor->GetClass()->ImplementsInterface(UInteractable::StaticClass()))
-	{
-		return;
-	}
+	InteractionComponent->TryInteract();
+}
 
-	const bool bCanInteract = IInteractable::Execute_CanInteract(CurrentInteractActor, this);
-
-	if (!bCanInteract)
-	{
-		return;
-	}
-
-	IInteractable::Execute_Interact(CurrentInteractActor, this);
+void APOSTCharacter::OnBodyTemperatureChanged(float NewTemp)
+{
+	UE_LOG(LogPOST, Warning, TEXT("Char: OnBodyTempChang Call"))
+	TemperaturaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Temp: %.0f"), NewTemp)));
 }

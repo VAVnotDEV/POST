@@ -24,21 +24,30 @@ void UPOSTTemperatureComponent::BeginPlay()
 	
 }
 
+void UPOSTTemperatureComponent::SetTemperature(float NewTemp)
+{
+
+	CurrentTemperature = FMath::Clamp(CurrentTemperature, 0.0f, MaxTemperature);
+	OnBodyTemperatureChanged.Broadcast(CurrentTemperature);
+}
+
+void UPOSTTemperatureComponent::TemperatureUpdate()
+{
+	UE_LOG(LogPOST, Display, TEXT("Call TempUpdate: %f"), CurrentTemperature)
+	if (bIsInWarmZone)
+		SetTemperature(CurrentTemperature + HeatingRate);
+
+	else
+		SetTemperature(CurrentTemperature - CoolingRate);
+}
+
 
 // Called every frame
 void UPOSTTemperatureComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (bIsInWarmZone)
-		CurrentTemperature += HeatingRate * DeltaTime;
-
-	else
-		CurrentTemperature -= CoolingRate * DeltaTime;
-
-	CurrentTemperature = FMath::Clamp(CurrentTemperature, MinTemterature, MaxTemperature);
-
-		//UE_LOG(LogPOST, Log, TEXT("Temperature = %f"), CurrentTemperature)
+	TemperatureUpdate();
 }
 
 void UPOSTTemperatureComponent::SetInWarmZone(bool bIsZone)

@@ -48,9 +48,6 @@ void ATemperatureZone::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, 
 	if (!TempComp) return;
 
 	TempComp->SetInWarmZone(true);
-
-	
-
 }
 
 void ATemperatureZone::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)

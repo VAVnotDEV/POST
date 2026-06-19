@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "POSTTemperatureComponent.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnBodyTemperaureChanged, float)
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class POST_API UPOSTTemperatureComponent : public UActorComponent
@@ -16,9 +17,13 @@ public:
 	// Sets default values for this component's properties
 	UPOSTTemperatureComponent();
 
+	FOnBodyTemperaureChanged OnBodyTemperatureChanged;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+	void SetTemperature(float NewTemp);
+	void TemperatureUpdate();
 
 public:	
 	// Called every frame
@@ -30,7 +35,6 @@ public:
 private:
 	float CurrentTemperature;
 	float MaxTemperature = 100.0f;
-	float MinTemterature = 0.0f;
 	float CoolingRate = 3.0f;
 	float HeatingRate = 5.0f;
 	bool bIsInWarmZone = false;

@@ -25,34 +25,38 @@ APOSTDayNightController::APOSTDayNightController()
 	SkySphereActor = nullptr;
 }
 
-void APOSTDayNightController::Day()
-{
-	PostProcess->Settings.AutoExposureBias = ExposureDay;
-	DirectionalLight->SetActorRotation(SunDayPosition);
-	DirectionalLight->GetLightComponent()->SetIntensity(DirectionLightDayIntensity);
-	SkyLight->GetLightComponent()->SetIntensity(SkyLightDayIntensity);
-	HeightFog->GetComponent()->SetVisibility(true);
-	UE_LOG(LogPOST, Display, TEXT(""))
-}
-
 void APOSTDayNightController::Night()
 {
-	PostProcess->Settings.AutoExposureBias = ExposureNight;
-	DirectionalLight->SetActorRotation(SunNightPosition);
-	DirectionalLight->GetLightComponent()->SetIntensity(LightNightIntensity);
-	SkyLight->GetLightComponent()->SetIntensity(LightNightIntensity);
-	HeightFog->GetComponent()->SetVisibility(false);
+	SunPosition = FRotator( 90.0f, 0.0f, 0.0f);
+	Exposure = -1.0f;
+	DirectionLightIntensity = 0;
+	SkyLightIntensity = 0;
+	HeightFogVisibility = false;
 }
 
 // Called when the game starts or when spawned
 void APOSTDayNightController::BeginPlay()
 {
-	Super::BeginPlay();
 
+	
 	if (bIsNight)
 		Night();
-	else
-		Day();
+
+	if (!PostProcess) return;
+	PostProcess->Settings.AutoExposureBias = Exposure;
+
+	if (!DirectionalLight) return;
+	DirectionalLight->SetActorRotation(SunPosition);
+	DirectionalLight->GetLightComponent()->SetIntensity(DirectionLightIntensity);
+	
+	if (!SkyLight) return;
+	SkyLight->GetLightComponent()->SetIntensity(SkyLightIntensity);
+	
+	if (!HeightFog) return;
+	HeightFog->GetComponent()->SetVisibility(HeightFogVisibility);
+	HeightFog->GetComponent()->FogInscatteringColor = FogColor;
+
+	Super::BeginPlay();
 }
 
 // Called every frame
