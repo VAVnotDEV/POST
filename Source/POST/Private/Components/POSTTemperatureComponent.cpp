@@ -27,7 +27,7 @@ void UPOSTTemperatureComponent::BeginPlay()
 void UPOSTTemperatureComponent::SetTemperature(float NewTemp)
 {
 
-	CurrentTemperature = FMath::Clamp(CurrentTemperature, 0.0f, MaxTemperature);
+	CurrentTemperature = FMath::Clamp(NewTemp, 0.0f, MaxTemperature);
 	OnBodyTemperatureChanged.Broadcast(CurrentTemperature);
 }
 
