@@ -26,17 +26,14 @@ void UPOSTTemperatureComponent::BeginPlay()
 
 void UPOSTTemperatureComponent::SetTemperature(float NewTemp)
 {
-
 	CurrentTemperature = FMath::Clamp(NewTemp, 0.0f, MaxTemperature);
 	OnBodyTemperatureChanged.Broadcast(CurrentTemperature);
 }
 
 void UPOSTTemperatureComponent::TemperatureUpdate()
 {
-	UE_LOG(LogPOST, Display, TEXT("Call TempUpdate: %f"), CurrentTemperature)
 	if (bIsInWarmZone)
 		SetTemperature(CurrentTemperature + HeatingRate);
-
 	else
 		SetTemperature(CurrentTemperature - CoolingRate);
 }

@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "POSTStaminaComponent.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnStaminaChanged, float)
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class POST_API UPOSTStaminaComponent : public UActorComponent
@@ -24,6 +25,8 @@ public:
 
 	float GetCurrentStamina() const;
 
+	FOnStaminaChanged OnStaminaChanged;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -33,9 +36,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stamina")
 	float MaxStamina = 100.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stamina")
-	float MinStamina = 0.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stamina")
 	float StaminaSpendRate = 10.0f;
@@ -52,4 +52,7 @@ public:
 
 private:
 	bool bIsSpendingStamina = false;
+
+	void SetStamina(float NewStamina);
+	void StaminaUpdate();
 };

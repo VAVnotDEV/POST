@@ -10,6 +10,7 @@
 #include "Components/TextRenderComponent.h"
 #include "Components/POSTEntityAudioComponent.h"
 #include "Components/POSTInteractionComponent.h"
+#include "Components/POSTFootstepComponent.h"
 #include "POSTLog.h"
 
 
@@ -21,7 +22,7 @@ APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
 	: Super(ObjInit.SetDefaultSubobjectClass<UPOSTMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
  	// Set this character to call Tick() every frame. You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 88.f);
 	
@@ -41,12 +42,14 @@ APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
 	StaminaTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("StaminaTextComponent"));
 	StaminaTextComponent->SetupAttachment(GetRootComponent());
 
-	TemperaturaTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("TemperaturaTextComponent"));
-	TemperaturaTextComponent->SetupAttachment(GetRootComponent());
+	TemperatureTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("TemperaturaTextComponent"));
+	TemperatureTextComponent->SetupAttachment(GetRootComponent());
 
 	EntityAudioComponent = CreateDefaultSubobject<UPOSTEntityAudioComponent>(TEXT("EntityAudioComponent"));
 
 	InteractionComponent = CreateDefaultSubobject<UPOSTInteractionComponent>(TEXT("InteractionComponent"));
+
+	FootstepComponent = CreateDefaultSubobject<UPOSTFootstepComponent>(TEXT("FootstepComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -55,17 +58,16 @@ void APOSTCharacter::BeginPlay()
 	Super::BeginPlay();
 	SpawnFlashlight();
 	OnBodyTemperatureChanged(TemperatureComponent->GetCurrentTemperature());
+	OnStaminaChanged(StaminaComponent->GetCurrentStamina());
+
 	TemperatureComponent->OnBodyTemperatureChanged.AddUObject(this, &APOSTCharacter::OnBodyTemperatureChanged);
+	StaminaComponent->OnStaminaChanged.AddUObject(this, &APOSTCharacter::OnStaminaChanged);
 }
 
 // Called every frame
 void APOSTCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	const auto Stamina = StaminaComponent->GetCurrentStamina();
-	StaminaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Stamina: %.0f"), Stamina)));
-	
 }
 
 // Called to bind functionality to input
@@ -160,6 +162,10 @@ void APOSTCharacter::TryInteract()
 
 void APOSTCharacter::OnBodyTemperatureChanged(float NewTemp)
 {
-	UE_LOG(LogPOST, Warning, TEXT("Char: OnBodyTempChang Call"))
-	TemperaturaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Temp: %.0f"), NewTemp)));
+	TemperatureTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Temp: %.0f"), NewTemp)));
+}
+
+void APOSTCharacter::OnStaminaChanged(float NewStamina)
+{
+	StaminaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Stamina: %.0f"), NewStamina)));
 }

@@ -16,6 +16,7 @@ class UPOSTStaminaComponent;
 class UTextRenderComponent;
 class UPOSTEntityAudioComponent;
 class UPOSTInteractionComponent;
+class UPOSTFootstepComponent;
 
 UCLASS()
 class POST_API APOSTCharacter : public ACharacter
@@ -47,13 +48,16 @@ protected:
 	UTextRenderComponent* StaminaTextComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
-	UTextRenderComponent* TemperaturaTextComponent;
+	UTextRenderComponent* TemperatureTextComponent;
 
 	UPROPERTY(VisibleAnywhere)
 	UPOSTEntityAudioComponent* EntityAudioComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UPOSTInteractionComponent* InteractionComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPOSTFootstepComponent* FootstepComponent;
 
 	 UFUNCTION(BlueprintCallable)
 	 void ToggleFlashlight();
@@ -93,5 +97,6 @@ private:
 	UPOSTStaminaComponent* StaminaComponent;
 
 	void OnBodyTemperatureChanged(float NewTemp);
+	void OnStaminaChanged(float NewStamina);
 	void TryInteract();
 };

@@ -18,7 +18,7 @@ UPOSTStaminaComponent::UPOSTStaminaComponent()
 
 bool UPOSTStaminaComponent::HasStamina() const
 {
-	return CurrentStamina > MinStamina;
+	return CurrentStamina > 0.0f;
 }
 
 bool UPOSTStaminaComponent::CanRun() const
@@ -52,19 +52,24 @@ void UPOSTStaminaComponent::BeginPlay()
 	
 }
 
-
 // Called every frame
 void UPOSTStaminaComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	StaminaUpdate();
+}
 
+void UPOSTStaminaComponent::SetStamina(float NewStamina)
+{
+	CurrentStamina = FMath::Clamp(NewStamina, 0.0f, MaxStamina);
+	OnStaminaChanged.Broadcast(CurrentStamina);
+}
+
+void UPOSTStaminaComponent::StaminaUpdate()
+{
 	if (bIsSpendingStamina && HasStamina())
-		CurrentStamina -= StaminaSpendRate * DeltaTime;
+		SetStamina(CurrentStamina -= StaminaSpendRate);
 	else
-		CurrentStamina += StaminaRegenRate * DeltaTime;
-
-	CurrentStamina = FMath::Clamp(CurrentStamina, MinStamina, MaxStamina);
-
-	//UE_LOG(LogPOST, Display, TEXT("Stamina: %f"), CurrentStamina)
+		SetStamina(CurrentStamina += StaminaRegenRate);
 }
 

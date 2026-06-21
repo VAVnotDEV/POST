@@ -33,9 +33,17 @@ public:
 	float GetCurrentTemperature();
 
 private:
+	UPROPERTY(EditDefaultsOnly, Category = "Temperature")
 	float CurrentTemperature;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Temperature")
 	float MaxTemperature = 100.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Temperature")
 	float CoolingRate = 3.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Temperature")
 	float HeatingRate = 5.0f;
+
 	bool bIsInWarmZone = false;
 };

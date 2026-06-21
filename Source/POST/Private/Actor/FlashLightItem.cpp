@@ -5,6 +5,8 @@
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SceneComponent.h"
+#include "Sound/SoundBase.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AFlashLightItem::AFlashLightItem()
@@ -27,6 +29,9 @@ void AFlashLightItem::ToggleFlashLight()
 {
 	UE_LOG(LogTemp, Warning, TEXT("FlashLight: Call Toggle"));
 	bIsFlashlightOn = !bIsFlashlightOn;
+
+	if (ToggleSound)
+		UGameplayStatics::PlaySoundAtLocation(this, ToggleSound, GetActorLocation());
 
 	if (bIsFlashlightOn)
 		setFlashLightEnabled();

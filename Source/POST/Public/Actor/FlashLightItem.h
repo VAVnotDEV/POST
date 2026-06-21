@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "FlashLightItem.generated.h"
 
+class USoundBase;
 
 UCLASS()
 class POST_API AFlashLightItem : public AActor
@@ -24,6 +25,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component")
 	class USpotLightComponent* LightComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, CAtegory = "Sound")
+	USoundBase* ToggleSound;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
 	bool bIsFlashlightOn;
