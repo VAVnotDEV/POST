@@ -31,7 +31,7 @@ void APOSTDayNightController::Night()
 	Exposure = -1.0f;
 	DirectionLightIntensity = 0;
 	SkyLightIntensity = 0;
-	HeightFogVisibility = false;
+	//HeightFogVisibility = false;
 }
 
 // Called when the game starts or when spawned
