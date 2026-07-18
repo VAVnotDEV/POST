@@ -1,0 +1,5 @@
+#include "Gameplay/POSTStoryTrigger.h"
+#include "Gameplay/POSTGameDirector.h"
+APOSTStoryTrigger::APOSTStoryTrigger(){ PrimaryActorTick.bCanEverTick=false; Trigger=CreateDefaultSubobject<UBoxComponent>(TEXT("Trigger")); SetRootComponent(Trigger); Trigger->SetCollisionProfileName(TEXT("Trigger")); }
+void APOSTStoryTrigger::BeginPlay(){ Super::BeginPlay(); Trigger->OnComponentBeginOverlap.AddDynamic(this,&APOSTStoryTrigger::HandleOverlap); }
+void APOSTStoryTrigger::HandleOverlap(UPrimitiveComponent* OverlappedComponent,AActor* OtherActor,UPrimitiveComponent* OtherComp,int32 OtherBodyIndex,bool bFromSweep,const FHitResult& SweepResult){ if(!Director||!OtherActor) return; if(Director->AdvanceStoryStage(RequiredStage,NextStage)){ OnStoryTriggered(OtherActor); if(bDisableAfterTrigger) Trigger->SetCollisionEnabled(ECollisionEnabled::NoCollision); } }
