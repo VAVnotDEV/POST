@@ -8,6 +8,9 @@
 
 class APOSTEntityPresence;
 
+class USoundBase;
+class UAudioComponent;
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class POST_API UPOSTEntityAudioComponent : public UActorComponent
 {

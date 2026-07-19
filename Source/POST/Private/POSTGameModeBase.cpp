@@ -2,8 +2,8 @@
 
 
 #include "POSTGameModeBase.h"
-#include "Player\POSTCharacter.h"
-#include "Player\POSTPlayerController.h"
+#include "Player/POSTCharacter.h"
+#include "Player/POSTPlayerController.h"
 #include "POSTGameState.h"
 
 APOSTGameModeBase::APOSTGameModeBase()

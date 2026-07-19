@@ -1,6 +1,12 @@
 #include "Gameplay/POSTGameDirector.h"
+
+#include "Components/POSTRadioComponent.h"
+#include "Gameplay/POSTAnomaly.h"
 #include "Gameplay/POSTRunSaveGame.h"
 #include "Kismet/GameplayStatics.h"
+#include "Player/POSTCharacter.h"
+#include "EngineUtils.h"
+#include "TimerManager.h"
 
 APOSTGameDirector::APOSTGameDirector()
 {
@@ -11,6 +17,39 @@ void APOSTGameDirector::BeginPlay()
 {
     Super::BeginPlay();
     LoadProgress();
+    CacheWorldReferences();
+    GetWorldTimerManager().SetTimer(DirectorTimer, this, &APOSTGameDirector::UpdateDirector, DirectorUpdateInterval, true);
+}
+
+void APOSTGameDirector::CacheWorldReferences()
+{
+    Player = Cast<APOSTCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+    Anomalies.Reset();
+    for (TActorIterator<APOSTAnomaly> It(GetWorld()); It; ++It)
+    {
+        Anomalies.Add(*It);
+    }
+}
+
+void APOSTGameDirector::UpdateDirector()
+{
+    if (!Player)
+    {
+        Player = Cast<APOSTCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+    }
+    if (!Player) return;
+
+    const float NewThreat = 1.0f - FMath::Clamp(FVector::Distance(Player->GetActorLocation(), EntityLocation) / FMath::Max(ThreatRadius, 1.0f), 0.0f, 1.0f);
+    if (!FMath::IsNearlyEqual(NewThreat, ThreatLevel, 0.01f))
+    {
+        ThreatLevel = NewThreat;
+        OnThreatChanged.Broadcast(ThreatLevel);
+    }
+
+    if (UPOSTRadioComponent* Radio = Player->GetRadioComponent())
+    {
+        Radio->SetInterference(ThreatLevel);
+    }
 }
 
 bool APOSTGameDirector::SetStoryStage(EPOSTStoryStage NewStage)
@@ -38,6 +77,60 @@ void APOSTGameDirector::RegisterDeath(EPOSTDeathCause Cause)
     OnRebooted.Broadcast(RebootCount, Cause);
     if (Cause == EPOSTDeathCause::Cold) OnColdAftereffectRequested();
     OnWorldRebootRequested(Cause);
+}
+
+bool APOSTGameDirector::PlayRadioMessage(FName MessageId)
+{
+    if (!Player) CacheWorldReferences();
+    if (!Player || !Player->GetRadioComponent()) return false;
+
+    for (const FPOSTRadioMessage& Message : RadioMessages)
+    {
+        if (Message.MessageId != MessageId || !Message.Sound) continue;
+        if (static_cast<uint8>(StoryStage) < static_cast<uint8>(Message.MinimumStage)) return false;
+        if (Message.bPlayOnce && PlayedRadioMessages.Contains(MessageId)) return false;
+        if (!Player->GetRadioComponent()->PlayMessage(MessageId, Message.Sound)) return false;
+        if (Message.bPlayOnce) PlayedRadioMessages.Add(MessageId);
+        return true;
+    }
+    return false;
+}
+
+void APOSTGameDirector::SetEntityLocation(FVector NewLocation)
+{
+    EntityLocation = NewLocation;
+}
+
+bool APOSTGameDirector::ActivateAnomalyByName(FName ActorName)
+{
+    for (APOSTAnomaly* Anomaly : Anomalies)
+    {
+        if (IsValid(Anomaly) && Anomaly->GetFName() == ActorName)
+        {
+            return Anomaly->ActivateAnomaly();
+        }
+    }
+    return false;
+}
+
+bool APOSTGameDirector::TryActivateNearbyAnomaly()
+{
+    if (!Player || ThreatLevel < MinimumThreatForAnomaly) return false;
+
+    TArray<APOSTAnomaly*> Candidates;
+    for (APOSTAnomaly* Anomaly : Anomalies)
+    {
+        if (IsValid(Anomaly) && !Anomaly->IsActive()) Candidates.Add(Anomaly);
+    }
+    if (Candidates.Num() == 0) return false;
+
+    Candidates.Sort([this](const APOSTAnomaly& A, const APOSTAnomaly& B)
+    {
+        return FVector::DistSquared(A.GetActorLocation(), Player->GetActorLocation()) < FVector::DistSquared(B.GetActorLocation(), Player->GetActorLocation());
+    });
+
+    const int32 PoolSize = FMath::Min(3, Candidates.Num());
+    return Candidates[FMath::RandRange(0, PoolSize - 1)]->ActivateAnomaly();
 }
 
 bool APOSTGameDirector::SaveProgress()
@@ -73,4 +166,5 @@ void APOSTGameDirector::ResetProgress()
     WorldResourceMultiplier = 1.0f;
     GeneratorReliabilityMultiplier = 1.0f;
     LastDeathCause = EPOSTDeathCause::Unknown;
+    PlayedRadioMessages.Reset();
 }

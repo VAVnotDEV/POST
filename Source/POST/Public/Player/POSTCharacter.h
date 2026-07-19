@@ -4,100 +4,114 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Camera/CameraComponent.h"
-#include "Components/CapsuleComponent.h"
 #include "POSTCharacter.generated.h"
 
-
-
 class AFlashLightItem;
+class APOSTCarryableActor;
+class UCameraComponent;
+class USceneComponent;
+class UTextRenderComponent;
 class UPOSTTemperatureComponent;
 class UPOSTStaminaComponent;
-class UTextRenderComponent;
-class UPOSTEntityAudioComponent;
 class UPOSTInteractionComponent;
 class UPOSTFootstepComponent;
+class UPOSTRadioComponent;
 
 UCLASS()
 class POST_API APOSTCharacter : public ACharacter
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
-	APOSTCharacter(const FObjectInitializer& ObjInit);
+    APOSTCharacter(const FObjectInitializer& ObjInit);
+
+    virtual void Tick(float DeltaTime) override;
+    virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
+    UFUNCTION(BlueprintPure, Category="POST|Movement")
+    bool IsRunning() const;
+
+    UFUNCTION(BlueprintPure, Category="POST|Components")
+    UPOSTTemperatureComponent* GetTemperatureComponent() const { return TemperatureComponent; }
+
+    UFUNCTION(BlueprintPure, Category="POST|Components")
+    UPOSTStaminaComponent* GetStaminaComponent() const { return StaminaComponent; }
+
+    UFUNCTION(BlueprintPure, Category="POST|Components")
+    UPOSTRadioComponent* GetRadioComponent() const { return RadioComponent; }
+
+    UFUNCTION(BlueprintPure, Category="POST|Carry")
+    USceneComponent* GetCarryPoint() const { return CarryPoint; }
+
+    UFUNCTION(BlueprintPure, Category="POST|Carry")
+    APOSTCarryableActor* GetCarriedActor() const { return CarriedActor; }
+
+    UFUNCTION(BlueprintCallable, Category="POST|Carry")
+    bool TryCarry(APOSTCarryableActor* Actor);
+
+    UFUNCTION(BlueprintCallable, Category="POST|Carry")
+    void DropCarriedActor();
 
 protected:
-	// Called when the game starts or when spawned
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UCameraComponent* Camera;
+    virtual void BeginPlay() override;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UCapsuleComponent* Capsule;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+    UCameraComponent* Camera = nullptr;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class USceneComponent* FlashlightAttachPoint;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+    USceneComponent* FlashlightAttachPoint = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, Category = "FlashLight")
-	TSubclassOf<AFlashLightItem> FlashlightClass;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+    USceneComponent* CarryPoint = nullptr;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FlashLight")
-	 AFlashLightItem* FlashlightActor;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
-	UTextRenderComponent* StaminaTextComponent;
+    UPROPERTY(EditDefaultsOnly, Category="FlashLight")
+    TSubclassOf<AFlashLightItem> FlashlightClass;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
-	UTextRenderComponent* TemperatureTextComponent;
+    UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category="FlashLight")
+    AFlashLightItem* FlashlightActor = nullptr;
 
-	UPROPERTY(VisibleAnywhere)
-	UPOSTEntityAudioComponent* EntityAudioComponent;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+    UTextRenderComponent* StaminaTextComponent = nullptr;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPOSTInteractionComponent* InteractionComponent;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+    UTextRenderComponent* TemperatureTextComponent = nullptr;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPOSTFootstepComponent* FootstepComponent;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+    UPOSTInteractionComponent* InteractionComponent = nullptr;
 
-	 UFUNCTION(BlueprintCallable)
-	 void ToggleFlashlight();
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+    UPOSTFootstepComponent* FootstepComponent = nullptr;
 
-	virtual void BeginPlay() override;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+    UPOSTRadioComponent* RadioComponent = nullptr;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+    UPOSTTemperatureComponent* TemperatureComponent = nullptr;
 
-	
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-	bool IsRunning() const;
-
-	UPOSTTemperatureComponent* GetTemperatureComponent() const;
-	UPOSTStaminaComponent* GetStaminaComponent() const;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+    UPOSTStaminaComponent* StaminaComponent = nullptr;
 
 private:
-	void MoveForward(float Amount);
-	void MoveRight(float Amount);
-	void SpawnFlashlight();
-	bool IsMovingForward = false;
-	bool WantsToRun = false;
+    void MoveForward(float Amount);
+    void MoveRight(float Amount);
+    void SpawnFlashlight();
+    void ToggleFlashlight();
+    void OnStartRunning();
+    void OnStopRunning();
+    void TryInteract();
 
-	bool bIsFrozen = false;
+    UFUNCTION()
+    void OnBodyTemperatureChanged(float NewTemp);
 
-	void OnStartRunning();
-	void OnStopRunning();
+    UFUNCTION()
+    void OnStaminaChanged(float NewStamina);
 
-	UPROPERTY(EditAnywhere, Category = "Component")
-	UPOSTTemperatureComponent* TemperatureComponent;
+    UFUNCTION()
+    void HandleFrozen();
 
-	UPROPERTY(EditAnywhere, Category = "Components")
-	UPOSTStaminaComponent* StaminaComponent;
+    bool bIsMovingForward = false;
+    bool bWantsToRun = false;
 
-	UFUNCTION() void OnBodyTemperatureChanged(float NewTemp);
-	UFUNCTION() void OnStaminaChanged(float NewStamina);
-	UFUNCTION() void HandleFrozen();
-	void TryInteract();
+    UPROPERTY(Transient)
+    APOSTCarryableActor* CarriedActor = nullptr;
 };

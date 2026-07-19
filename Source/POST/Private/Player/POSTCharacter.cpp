@@ -1,177 +1,196 @@
 // Copyright (c) 2026 VAVnotDev. All Rights Reserved.
 
 #include "Player/POSTCharacter.h"
-#include "Interfaces/Interactable.h"
-#include "GameFramework/CharacterMovementComponent.h"
+
 #include "Actor/FlashLightItem.h"
-#include "Components/POSTMovementComponent.h"
-#include "Components/POSTTemperatureComponent.h"
-#include "Components/POSTStaminaComponent.h"
-#include "Components/TextRenderComponent.h"
-#include "Components/POSTEntityAudioComponent.h"
-#include "Components/POSTInteractionComponent.h"
+#include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/POSTFootstepComponent.h"
-#include "POSTLog.h"
+#include "Components/POSTInteractionComponent.h"
+#include "Components/POSTMovementComponent.h"
+#include "Components/POSTRadioComponent.h"
+#include "Components/POSTStaminaComponent.h"
+#include "Components/POSTTemperatureComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/TextRenderComponent.h"
+#include "Gameplay/POSTCarryableActor.h"
 
-
-
-//DEFINE_LOG_CATEGORY_STATIC(LogPOST, Display, All)
-
-// Sets default values
-APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit) 
-	: Super(ObjInit.SetDefaultSubobjectClass<UPOSTMovementComponent>(ACharacter::CharacterMovementComponentName))
+APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
+    : Super(ObjInit.SetDefaultSubobjectClass<UPOSTMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
- 	// Set this character to call Tick() every frame. You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = false;
 
-	GetCapsuleComponent()->InitCapsuleSize(42.f, 88.f);
-	
-	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	Camera->SetupAttachment(GetCapsuleComponent());
-	Camera->SetRelativeLocation(FVector(0.f, 0.f, 64.f));
-	Camera->bUsePawnControlRotation = true;
+    GetCapsuleComponent()->InitCapsuleSize(42.0f, 88.0f);
 
-	FlashlightAttachPoint = CreateDefaultSubobject<USceneComponent>(TEXT("FlashLightAttachPoint"));
-	FlashlightAttachPoint->SetupAttachment(Camera);
-	
-	FlashlightActor = nullptr;
+    Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+    Camera->SetupAttachment(GetCapsuleComponent());
+    Camera->SetRelativeLocation(FVector(0.0f, 0.0f, 64.0f));
+    Camera->bUsePawnControlRotation = true;
 
-	TemperatureComponent = CreateDefaultSubobject<UPOSTTemperatureComponent>(TEXT("TemperatureComponent"));
-	StaminaComponent = CreateDefaultSubobject<UPOSTStaminaComponent>(TEXT("StaminaComponent"));
+    FlashlightAttachPoint = CreateDefaultSubobject<USceneComponent>(TEXT("FlashLightAttachPoint"));
+    FlashlightAttachPoint->SetupAttachment(Camera);
 
-	StaminaTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("StaminaTextComponent"));
-	StaminaTextComponent->SetupAttachment(GetRootComponent());
+    CarryPoint = CreateDefaultSubobject<USceneComponent>(TEXT("CarryPoint"));
+    CarryPoint->SetupAttachment(Camera);
+    CarryPoint->SetRelativeLocation(FVector(120.0f, 0.0f, -20.0f));
 
-	TemperatureTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("TemperaturaTextComponent"));
-	TemperatureTextComponent->SetupAttachment(GetRootComponent());
+    TemperatureComponent = CreateDefaultSubobject<UPOSTTemperatureComponent>(TEXT("TemperatureComponent"));
+    StaminaComponent = CreateDefaultSubobject<UPOSTStaminaComponent>(TEXT("StaminaComponent"));
+    RadioComponent = CreateDefaultSubobject<UPOSTRadioComponent>(TEXT("RadioComponent"));
+    InteractionComponent = CreateDefaultSubobject<UPOSTInteractionComponent>(TEXT("InteractionComponent"));
+    FootstepComponent = CreateDefaultSubobject<UPOSTFootstepComponent>(TEXT("FootstepComponent"));
 
-	EntityAudioComponent = CreateDefaultSubobject<UPOSTEntityAudioComponent>(TEXT("EntityAudioComponent"));
+    StaminaTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("StaminaTextComponent"));
+    StaminaTextComponent->SetupAttachment(GetRootComponent());
 
-	InteractionComponent = CreateDefaultSubobject<UPOSTInteractionComponent>(TEXT("InteractionComponent"));
-
-	FootstepComponent = CreateDefaultSubobject<UPOSTFootstepComponent>(TEXT("FootstepComponent"));
+    TemperatureTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("TemperatureTextComponent"));
+    TemperatureTextComponent->SetupAttachment(GetRootComponent());
 }
 
-// Called when the game starts or when spawned
 void APOSTCharacter::BeginPlay()
 {
-	Super::BeginPlay();
-	SpawnFlashlight();
-	OnBodyTemperatureChanged(TemperatureComponent->GetCurrentTemperature());
-	OnStaminaChanged(StaminaComponent->GetCurrentStamina());
+    Super::BeginPlay();
 
-	TemperatureComponent->OnBodyTemperatureChanged.AddDynamic(this, &APOSTCharacter::OnBodyTemperatureChanged);
-	TemperatureComponent->OnPlayerFrozen.AddDynamic(this, &APOSTCharacter::HandleFrozen);
-	StaminaComponent->OnStaminaChanged.AddDynamic(this, &APOSTCharacter::OnStaminaChanged);
+    SpawnFlashlight();
+    OnBodyTemperatureChanged(TemperatureComponent->GetCurrentTemperature());
+    OnStaminaChanged(StaminaComponent->GetCurrentStamina());
+
+    TemperatureComponent->OnBodyTemperatureChanged.AddDynamic(this, &APOSTCharacter::OnBodyTemperatureChanged);
+    TemperatureComponent->OnPlayerFrozen.AddDynamic(this, &APOSTCharacter::HandleFrozen);
+    StaminaComponent->OnStaminaChanged.AddDynamic(this, &APOSTCharacter::OnStaminaChanged);
 }
 
-// Called every frame
 void APOSTCharacter::Tick(float DeltaTime)
 {
-	Super::Tick(DeltaTime);
+    Super::Tick(DeltaTime);
 }
 
-// Called to bind functionality to input
 void APOSTCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	check(PlayerInputComponent);
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
+    check(PlayerInputComponent);
 
-	PlayerInputComponent->BindAxis("MoveForward", this, &APOSTCharacter::MoveForward);
-	PlayerInputComponent->BindAxis("MoveRight", this, &APOSTCharacter::MoveRight);
-	PlayerInputComponent->BindAxis("LookUp", this, &APOSTCharacter::AddControllerPitchInput);
-	PlayerInputComponent->BindAxis("Turn", this, &APOSTCharacter::AddControllerYawInput);
-	PlayerInputComponent->BindAction("Flashlight", IE_Pressed, this, &APOSTCharacter::ToggleFlashlight);
-	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &APOSTCharacter::OnStartRunning);
-	PlayerInputComponent->BindAction("Run", IE_Released, this, &APOSTCharacter::OnStopRunning);
-	PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APOSTCharacter::TryInteract);
-	
+    PlayerInputComponent->BindAxis(TEXT("MoveForward"), this, &APOSTCharacter::MoveForward);
+    PlayerInputComponent->BindAxis(TEXT("MoveRight"), this, &APOSTCharacter::MoveRight);
+    PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &APOSTCharacter::AddControllerPitchInput);
+    PlayerInputComponent->BindAxis(TEXT("Turn"), this, &APOSTCharacter::AddControllerYawInput);
+    PlayerInputComponent->BindAction(TEXT("Flashlight"), IE_Pressed, this, &APOSTCharacter::ToggleFlashlight);
+    PlayerInputComponent->BindAction(TEXT("Run"), IE_Pressed, this, &APOSTCharacter::OnStartRunning);
+    PlayerInputComponent->BindAction(TEXT("Run"), IE_Released, this, &APOSTCharacter::OnStopRunning);
+    PlayerInputComponent->BindAction(TEXT("Interact"), IE_Pressed, this, &APOSTCharacter::TryInteract);
+    PlayerInputComponent->BindAction(TEXT("Drop"), IE_Pressed, this, &APOSTCharacter::DropCarriedActor);
 }
 
 void APOSTCharacter::MoveForward(float Amount)
 {
-	IsMovingForward = Amount > 0.0f;
-	AddMovementInput(GetActorForwardVector(), Amount);
+    bIsMovingForward = Amount > 0.0f;
+    AddMovementInput(GetActorForwardVector(), Amount);
 }
 
 void APOSTCharacter::MoveRight(float Amount)
 {
-	
-	AddMovementInput(GetActorRightVector(), Amount);
+    AddMovementInput(GetActorRightVector(), Amount);
 }
 
 void APOSTCharacter::SpawnFlashlight()
 {
-	if (!FlashlightClass) { return; }
+    if (!FlashlightClass || !GetWorld())
+    {
+        return;
+    }
 
-	if (!GetWorld()) return;
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = this;
+    SpawnParams.Instigator = this;
 
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = this;
-	SpawnParams.Instigator = this;
+    FlashlightActor = GetWorld()->SpawnActor<AFlashLightItem>(
+        FlashlightClass,
+        FVector::ZeroVector,
+        FRotator::ZeroRotator,
+        SpawnParams);
 
-	FlashlightActor = GetWorld()->SpawnActor<AFlashLightItem>(
-		FlashlightClass, 
-		FVector::ZeroVector, 
-		FRotator::ZeroRotator, 
-		SpawnParams);
-
-	if (!FlashlightActor) { return; }
-
-	FlashlightActor->AttachToComponent(FlashlightAttachPoint, FAttachmentTransformRules::SnapToTargetIncludingScale);
+    if (FlashlightActor)
+    {
+        FlashlightActor->AttachToComponent(
+            FlashlightAttachPoint,
+            FAttachmentTransformRules::SnapToTargetIncludingScale);
+    }
 }
 
 void APOSTCharacter::ToggleFlashlight()
 {
-	if (!FlashlightActor) { return; }
-
-	FlashlightActor->ToggleFlashLight();
+    if (FlashlightActor)
+    {
+        FlashlightActor->ToggleFlashLight();
+    }
 }
 
 bool APOSTCharacter::IsRunning() const
 {
-	return WantsToRun && IsMovingForward && !GetVelocity().IsZero() && StaminaComponent->CanRun();
-}
-
-UPOSTTemperatureComponent* APOSTCharacter::GetTemperatureComponent() const
-{
-	return TemperatureComponent;
-}
-
-UPOSTStaminaComponent* APOSTCharacter::GetStaminaComponent() const
-{
-	return StaminaComponent;
+    return bWantsToRun && bIsMovingForward && !GetVelocity().IsNearlyZero() && StaminaComponent->CanRun();
 }
 
 void APOSTCharacter::OnStartRunning()
 {
-	WantsToRun = true;
+    bWantsToRun = true;
+    StaminaComponent->StartSpendStamina();
 }
 
 void APOSTCharacter::OnStopRunning()
 {
-	WantsToRun = false;
+    bWantsToRun = false;
+    StaminaComponent->StopSpendStamina();
 }
-
 
 void APOSTCharacter::TryInteract()
 {
-	if (!InteractionComponent) return;
+    if (InteractionComponent)
+    {
+        InteractionComponent->TryInteract();
+    }
+}
 
-	InteractionComponent->TryInteract();
+bool APOSTCharacter::TryCarry(APOSTCarryableActor* Actor)
+{
+    if (!Actor || CarriedActor)
+    {
+        return false;
+    }
+
+    CarriedActor = Actor;
+    Actor->AttachToCharacter(this);
+    return true;
+}
+
+void APOSTCharacter::DropCarriedActor()
+{
+    if (!CarriedActor)
+    {
+        return;
+    }
+
+    APOSTCarryableActor* ActorToDrop = CarriedActor;
+    CarriedActor = nullptr;
+    ActorToDrop->Drop();
 }
 
 void APOSTCharacter::OnBodyTemperatureChanged(float NewTemp)
 {
-	TemperatureTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Temp: %.0f"), NewTemp)));
+    if (TemperatureTextComponent)
+    {
+        TemperatureTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Temp: %.0f"), NewTemp)));
+    }
 }
 
 void APOSTCharacter::OnStaminaChanged(float NewStamina)
 {
-	StaminaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Stamina: %.0f"), NewStamina)));
+    if (StaminaTextComponent)
+    {
+        StaminaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Stamina: %.0f"), NewStamina)));
+    }
 }
 
 void APOSTCharacter::HandleFrozen()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Player frozen. Bind death/reboot logic in Blueprint or GameMode."));
+    UE_LOG(LogTemp, Warning, TEXT("Player frozen. Director should register a cold reboot."));
 }

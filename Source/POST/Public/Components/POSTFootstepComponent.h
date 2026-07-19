@@ -7,6 +7,8 @@
 #include "POSTFootstepComponent.generated.h"
 
 
+class USoundBase;
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class POST_API UPOSTFootstepComponent : public UActorComponent
 {
