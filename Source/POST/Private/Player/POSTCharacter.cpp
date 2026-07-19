@@ -60,8 +60,9 @@ void APOSTCharacter::BeginPlay()
 	OnBodyTemperatureChanged(TemperatureComponent->GetCurrentTemperature());
 	OnStaminaChanged(StaminaComponent->GetCurrentStamina());
 
-	TemperatureComponent->OnBodyTemperatureChanged.AddUObject(this, &APOSTCharacter::OnBodyTemperatureChanged);
-	StaminaComponent->OnStaminaChanged.AddUObject(this, &APOSTCharacter::OnStaminaChanged);
+	TemperatureComponent->OnBodyTemperatureChanged.AddDynamic(this, &APOSTCharacter::OnBodyTemperatureChanged);
+	TemperatureComponent->OnPlayerFrozen.AddDynamic(this, &APOSTCharacter::HandleFrozen);
+	StaminaComponent->OnStaminaChanged.AddDynamic(this, &APOSTCharacter::OnStaminaChanged);
 }
 
 // Called every frame
@@ -168,4 +169,9 @@ void APOSTCharacter::OnBodyTemperatureChanged(float NewTemp)
 void APOSTCharacter::OnStaminaChanged(float NewStamina)
 {
 	StaminaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Stamina: %.0f"), NewStamina)));
+}
+
+void APOSTCharacter::HandleFrozen()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Player frozen. Bind death/reboot logic in Blueprint or GameMode."));
 }

@@ -1,59 +1,50 @@
-// Copyright (c) 2026 VAVnotDev. All Rights Reserved.
-
-
 #include "Components/POSTTemperatureComponent.h"
-#include "POSTLog.h"
 
-// Sets default values for this component's properties
 UPOSTTemperatureComponent::UPOSTTemperatureComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
+    PrimaryComponentTick.bCanEverTick = true;
 }
 
-
-// Called when the game starts
 void UPOSTTemperatureComponent::BeginPlay()
 {
-	Super::BeginPlay();
-
-	CurrentTemperature = MaxTemperature;
-	
+    Super::BeginPlay();
+    CurrentTemperature = MaxTemperature;
+    OnBodyTemperatureChanged.Broadcast(CurrentTemperature);
 }
 
-void UPOSTTemperatureComponent::SetTemperature(float NewTemp)
-{
-	CurrentTemperature = FMath::Clamp(NewTemp, 0.0f, MaxTemperature);
-	OnBodyTemperatureChanged.Broadcast(CurrentTemperature);
-}
-
-void UPOSTTemperatureComponent::TemperatureUpdate()
-{
-	if (bIsInWarmZone)
-		SetTemperature(CurrentTemperature + HeatingRate);
-	else
-		SetTemperature(CurrentTemperature - CoolingRate);
-}
-
-
-// Called every frame
 void UPOSTTemperatureComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	TemperatureUpdate();
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    const float Rate = bIsInWarmZone ? HeatingPerSecond : -CoolingPerSecond;
+    SetTemperature(CurrentTemperature + Rate * DeltaTime);
 }
 
-void UPOSTTemperatureComponent::SetInWarmZone(bool bIsZone)
+void UPOSTTemperatureComponent::SetInWarmZone(bool bIsInZone)
 {
-	bIsInWarmZone = bIsZone;
+    bIsInWarmZone = bIsInZone;
 }
 
-float UPOSTTemperatureComponent::GetCurrentTemperature()
+void UPOSTTemperatureComponent::AddTemperature(float Amount)
 {
-	return CurrentTemperature;
+    SetTemperature(CurrentTemperature + Amount);
 }
 
+void UPOSTTemperatureComponent::SetTemperature(float NewTemperature)
+{
+    const float Clamped = FMath::Clamp(NewTemperature, 0.0f, MaxTemperature);
+    if (!FMath::IsNearlyEqual(CurrentTemperature, Clamped))
+    {
+        CurrentTemperature = Clamped;
+        OnBodyTemperatureChanged.Broadcast(CurrentTemperature);
+    }
+
+    if (CurrentTemperature <= KINDA_SMALL_NUMBER && !bFrozenEventSent)
+    {
+        bFrozenEventSent = true;
+        OnPlayerFrozen.Broadcast();
+    }
+    else if (CurrentTemperature > 5.0f)
+    {
+        bFrozenEventSent = false;
+    }
+}

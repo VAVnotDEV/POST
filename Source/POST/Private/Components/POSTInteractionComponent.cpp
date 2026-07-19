@@ -1,116 +1,80 @@
-// Copyright (c) 2026 VAVnotDev. All Rights Reserved.
-
-
 #include "Components/POSTInteractionComponent.h"
+#include "Camera/CameraComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Interfaces/Interactable.h"
-#include "Camera/CameraComponent.h"
 
-// Sets default values for this component's properties
 UPOSTInteractionComponent::UPOSTInteractionComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
+    PrimaryComponentTick.bCanEverTick = true;
+    PrimaryComponentTick.TickInterval = 0.05f;
+}
 
-	// ...
+void UPOSTInteractionComponent::BeginPlay()
+{
+    Super::BeginPlay();
+    Camera = GetOwner() ? GetOwner()->FindComponentByClass<UCameraComponent>() : nullptr;
+    if (!Camera)
+    {
+        UE_LOG(LogTemp, Error, TEXT("POSTInteractionComponent: camera not found on %s"), *GetNameSafe(GetOwner()));
+        SetComponentTickEnabled(false);
+    }
+}
+
+void UPOSTInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    UpdateInteractActor();
 }
 
 void UPOSTInteractionComponent::UpdateInteractActor()
 {
-    CurrentInteractActor = nullptr;
-
-    if (!GetWorld() || !Camera) return;
-
-    AActor* Owner = GetOwner();
-    if (!Owner) return;
+    if (!GetWorld() || !Camera || !GetOwner())
+    {
+        SetFocusedActor(nullptr, FText::GetEmpty());
+        return;
+    }
 
     const FVector Start = Camera->GetComponentLocation();
     const FVector End = Start + Camera->GetForwardVector() * InteractDistance;
 
-    FHitResult HitResult;
+    FHitResult Hit;
+    FCollisionQueryParams Params(SCENE_QUERY_STAT(POSTInteraction), false, GetOwner());
+    const bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, TraceChannel, Params);
 
-    FCollisionQueryParams Params;
-    Params.AddIgnoredActor(Owner);
-
-    const bool bHit = GetWorld()->LineTraceSingleByChannel(
-        HitResult,
-        Start,
-        End,
-        ECC_Visibility,
-        Params
-    );
-
-#if WITH_EDITOR
-    DrawDebugLine(
-        GetWorld(),
-        Start,
-        End,
-        bHit ? FColor::Green : FColor::Red,
-        false,
-        0.0f,
-        0,
-        1.0f
-    );
-#endif
-
-    if (!bHit) return;
-
-    AActor* HitActor = HitResult.GetActor();
-    if (!HitActor) return;
-
-    if (!HitActor->GetClass()->ImplementsInterface(UInteractable::StaticClass()))
+    if (bDrawDebugTrace)
     {
+        DrawDebugLine(GetWorld(), Start, End, bHit ? FColor::Green : FColor::Red, false, 0.06f, 0, 1.0f);
+    }
+
+    AActor* HitActor = bHit ? Hit.GetActor() : nullptr;
+    if (!HitActor || !HitActor->GetClass()->ImplementsInterface(UInteractable::StaticClass()) ||
+        !IInteractable::Execute_CanInteract(HitActor, GetOwner()))
+    {
+        SetFocusedActor(nullptr, FText::GetEmpty());
         return;
     }
 
-    if (!IInteractable::Execute_CanInteract(HitActor, Owner))
-    {
-        return;
-    }
-
-    CurrentInteractActor = HitActor;
-
-    const FText InteractText = IInteractable::Execute_GetInteractText(HitActor, Owner);
-    UE_LOG(LogTemp, Warning, TEXT("Interact: %s"), *InteractText.ToString());
+    SetFocusedActor(HitActor, IInteractable::Execute_GetInteractText(HitActor, GetOwner()));
 }
 
 void UPOSTInteractionComponent::TryInteract()
 {
-    if (!CurrentInteractActor) return;
+    AActor* Target = CurrentInteractActor;
+    if (!IsValid(Target) || !GetOwner()) return;
+    if (!Target->GetClass()->ImplementsInterface(UInteractable::StaticClass())) return;
+    if (!IInteractable::Execute_CanInteract(Target, GetOwner())) return;
 
-    AActor* Owner = GetOwner();
-    if (!Owner) return;
-
-    if (!CurrentInteractActor->GetClass()->ImplementsInterface(UInteractable::StaticClass()))
-    {
-        return;
-    }
-
-    if (!IInteractable::Execute_CanInteract(CurrentInteractActor, Owner))
-    {
-        return;
-    }
-
-    IInteractable::Execute_Interact(CurrentInteractActor, Owner);
+    IInteractable::Execute_Interact(Target, GetOwner());
+    UpdateInteractActor();
 }
 
-
-// Called when the game starts
-void UPOSTInteractionComponent::BeginPlay()
+void UPOSTInteractionComponent::SetFocusedActor(AActor* NewActor, const FText& NewText)
 {
-	Super::BeginPlay();
-
-	// ...
-	
+    const bool bChanged = CurrentInteractActor != NewActor || !CurrentInteractText.EqualTo(NewText);
+    CurrentInteractActor = NewActor;
+    CurrentInteractText = NewText;
+    if (bChanged)
+    {
+        OnFocusedActorChanged.Broadcast(CurrentInteractActor, CurrentInteractText);
+    }
 }
-
-
-// Called every frame
-void UPOSTInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
-}
-

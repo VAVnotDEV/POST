@@ -1,75 +1,44 @@
-// Copyright (c) 2026 VAVnotDev. All Rights Reserved.
-
-
 #include "Components/POSTStaminaComponent.h"
-#include "POSTLog.h"
 
-// Sets default values for this component's properties
 UPOSTStaminaComponent::UPOSTStaminaComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
-
-	
-
-	// ...
+    PrimaryComponentTick.bCanEverTick = true;
 }
 
-bool UPOSTStaminaComponent::HasStamina() const
+void UPOSTStaminaComponent::BeginPlay()
 {
-	return CurrentStamina > 0.0f;
+    Super::BeginPlay();
+    CurrentStamina = MaxStamina;
+    OnStaminaChanged.Broadcast(CurrentStamina);
 }
 
-bool UPOSTStaminaComponent::CanRun() const
+void UPOSTStaminaComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-	return CurrentStamina >= MinStaminaToRun;
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    const float Delta = (bIsSpendingStamina && HasStamina()) ? -StaminaSpendPerSecond * DeltaTime : StaminaRegenPerSecond * DeltaTime;
+    SetStamina(CurrentStamina + Delta);
+    if (!HasStamina()) bIsSpendingStamina = false;
 }
 
 void UPOSTStaminaComponent::StartSpendStamina()
 {
-	if (CanRun())
-		bIsSpendingStamina = true;
+    if (CanRun()) bIsSpendingStamina = true;
 }
 
 void UPOSTStaminaComponent::StopSpendStamina()
 {
-	bIsSpendingStamina = false;
+    bIsSpendingStamina = false;
 }
 
-float UPOSTStaminaComponent::GetCurrentStamina() const
+void UPOSTStaminaComponent::RestoreStamina(float Amount)
 {
-	return CurrentStamina;
-}
-
-
-// Called when the game starts
-void UPOSTStaminaComponent::BeginPlay()
-{
-	Super::BeginPlay();
-
-	CurrentStamina = MaxStamina;
-	
-}
-
-// Called every frame
-void UPOSTStaminaComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	StaminaUpdate();
+    SetStamina(CurrentStamina + FMath::Max(0.0f, Amount));
 }
 
 void UPOSTStaminaComponent::SetStamina(float NewStamina)
 {
-	CurrentStamina = FMath::Clamp(NewStamina, 0.0f, MaxStamina);
-	OnStaminaChanged.Broadcast(CurrentStamina);
+    const float Clamped = FMath::Clamp(NewStamina, 0.0f, MaxStamina);
+    if (FMath::IsNearlyEqual(CurrentStamina, Clamped)) return;
+    CurrentStamina = Clamped;
+    OnStaminaChanged.Broadcast(CurrentStamina);
 }
-
-void UPOSTStaminaComponent::StaminaUpdate()
-{
-	if (bIsSpendingStamina && HasStamina())
-		SetStamina(CurrentStamina -= StaminaSpendRate);
-	else
-		SetStamina(CurrentStamina += StaminaRegenRate);
-}
-

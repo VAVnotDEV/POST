@@ -96,7 +96,8 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Components")
 	UPOSTStaminaComponent* StaminaComponent;
 
-	void OnBodyTemperatureChanged(float NewTemp);
-	void OnStaminaChanged(float NewStamina);
+	UFUNCTION() void OnBodyTemperatureChanged(float NewTemp);
+	UFUNCTION() void OnStaminaChanged(float NewStamina);
+	UFUNCTION() void HandleFrozen();
 	void TryInteract();
 };
