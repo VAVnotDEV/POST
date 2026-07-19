@@ -17,6 +17,9 @@ public:
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
     UFUNCTION(BlueprintCallable, Category="POST|Temperature") void SetInWarmZone(bool bIsInZone);
+    UFUNCTION(BlueprintCallable, Category="POST|Temperature") void AddWarmZone();
+    UFUNCTION(BlueprintCallable, Category="POST|Temperature") void RemoveWarmZone();
+    UFUNCTION(BlueprintPure, Category="POST|Temperature") bool IsInWarmZone() const { return WarmZoneCount > 0; }
     UFUNCTION(BlueprintCallable, Category="POST|Temperature") void AddTemperature(float Amount);
     UFUNCTION(BlueprintPure, Category="POST|Temperature") float GetCurrentTemperature() const { return CurrentTemperature; }
     UFUNCTION(BlueprintPure, Category="POST|Temperature") float GetTemperaturePercent() const { return MaxTemperature > 0.0f ? CurrentTemperature / MaxTemperature : 0.0f; }
@@ -32,7 +35,7 @@ protected:
 
 private:
     UPROPERTY(VisibleAnywhere, Category="POST|Temperature") float CurrentTemperature = 100.0f;
-    bool bIsInWarmZone = false;
+    int32 WarmZoneCount = 0;
     bool bFrozenEventSent = false;
     void SetTemperature(float NewTemperature);
 };

@@ -15,4 +15,10 @@ public:
     UPROPERTY(BlueprintReadWrite, SaveGame) float WorldResourceMultiplier = 1.0f;
     UPROPERTY(BlueprintReadWrite, SaveGame) float GeneratorReliabilityMultiplier = 1.0f;
     UPROPERTY(BlueprintReadWrite, SaveGame) EPOSTDeathCause LastDeathCause = EPOSTDeathCause::Unknown;
+    UPROPERTY(BlueprintReadWrite, SaveGame) bool bHasSavedWorldTime = false;
+    UPROPERTY(BlueprintReadWrite, SaveGame) int32 SavedDay = 1;
+    UPROPERTY(BlueprintReadWrite, SaveGame) int32 SavedHours = 21;
+    UPROPERTY(BlueprintReadWrite, SaveGame) int32 SavedMinutes = 0;
+    UPROPERTY(BlueprintReadWrite, SaveGame) int32 SavedSeconds = 0;
+    UPROPERTY(BlueprintReadWrite, SaveGame) TArray<FName> PlayedRadioMessageIds;
 };

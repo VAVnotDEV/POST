@@ -28,7 +28,7 @@ void UPOSTInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 void UPOSTInteractionComponent::UpdateInteractActor()
 {
-    if (!GetWorld() || !Camera || !GetOwner())
+    if (!bInteractionEnabled || !GetWorld() || !Camera || !GetOwner())
     {
         SetFocusedActor(nullptr, FText::GetEmpty());
         return;
@@ -59,13 +59,47 @@ void UPOSTInteractionComponent::UpdateInteractActor()
 
 void UPOSTInteractionComponent::TryInteract()
 {
+    if (!bInteractionEnabled)
+    {
+        return;
+    }
+
     AActor* Target = CurrentInteractActor;
     if (!IsValid(Target) || !GetOwner()) return;
     if (!Target->GetClass()->ImplementsInterface(UInteractable::StaticClass())) return;
     if (!IInteractable::Execute_CanInteract(Target, GetOwner())) return;
 
     IInteractable::Execute_Interact(Target, GetOwner());
-    UpdateInteractActor();
+
+    if (IsValid(this))
+    {
+        UpdateInteractActor();
+    }
+}
+
+void UPOSTInteractionComponent::SetInteractionEnabled(bool bEnabled)
+{
+    if (bInteractionEnabled == bEnabled)
+    {
+        return;
+    }
+
+    bInteractionEnabled = bEnabled;
+    SetComponentTickEnabled(bInteractionEnabled && Camera != nullptr);
+
+    if (!bInteractionEnabled)
+    {
+        ClearFocus();
+    }
+    else
+    {
+        UpdateInteractActor();
+    }
+}
+
+void UPOSTInteractionComponent::ClearFocus()
+{
+    SetFocusedActor(nullptr, FText::GetEmpty());
 }
 
 void UPOSTInteractionComponent::SetFocusedActor(AActor* NewActor, const FText& NewText)

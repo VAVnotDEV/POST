@@ -11,19 +11,6 @@ float UPOSTMovementComponent::GetMaxSpeed() const
 	const APOSTCharacter* Player = Cast<APOSTCharacter>(GetPawnOwner());
 	if (!Player) return MaxSpeed;
 
-	UPOSTStaminaComponent* Stamina = Player->GetStaminaComponent();
-	if (!Stamina) return MaxSpeed;
-
-	if (Player->IsRunning())
-	{
-		Stamina->StartSpendStamina();
-		return MaxSpeed * RunModifier;
-	}
-	else
-	{
-		Stamina->StopSpendStamina();
-		return MaxSpeed;
-	}
-	//return Player && Player->IsRunning() ? MaxSpeed * RunModifier : MaxSpeed;
+	return Player->IsRunning() ? MaxSpeed * RunModifier : MaxSpeed;
 }
 

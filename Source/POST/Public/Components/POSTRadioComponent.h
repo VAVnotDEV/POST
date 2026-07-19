@@ -29,11 +29,15 @@ public:
     UFUNCTION(BlueprintPure, Category="POST|Radio")
     bool IsMessagePlaying() const { return bMessagePlaying; }
 
+    UFUNCTION(BlueprintPure, Category="POST|Radio")
+    float GetInterferenceStrength() const { return InterferenceStrength; }
+
     UPROPERTY(BlueprintAssignable, Category="POST|Radio")
     FPOSTRadioMessageFinished OnMessageFinished;
 
 protected:
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="POST|Radio")
     USoundBase* InterferenceLoop = nullptr;
@@ -45,9 +49,14 @@ private:
     UFUNCTION()
     void HandleAudioFinished();
 
+    void ApplyInterference();
+    void StopAudioSilently();
+
     UPROPERTY(Transient)
     UAudioComponent* AudioComponent = nullptr;
 
     FName CurrentMessageId = NAME_None;
+    float InterferenceStrength = 0.0f;
     bool bMessagePlaying = false;
+    bool bSuppressFinishedCallback = false;
 };

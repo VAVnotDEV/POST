@@ -1,90 +1,97 @@
 // Copyright (c) 2026 VAVnotDev. All Rights Reserved.
 
-
 #include "Components/POSTFootstepComponent.h"
-#include "Kismet/GameplayStatics.h"
+
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Player/POSTCharacter.h"
 #include "Sound/SoundBase.h"
+#include "TimerManager.h"
 
-// Sets default values for this component's properties
 UPOSTFootstepComponent::UPOSTFootstepComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = false;
-
-	// ...
+    PrimaryComponentTick.bCanEverTick = false;
 }
 
-
-// Called when the game starts
 void UPOSTFootstepComponent::BeginPlay()
 {
-	Super::BeginPlay();
-
-	GetWorld()->GetTimerManager().SetTimer(FootstepTimerHandle, this, &UPOSTFootstepComponent::PlayFootstep, WalkStepInterval, true);
-	// ...
-	
+    Super::BeginPlay();
+    ScheduleNextFootstep(WalkStepInterval);
 }
 
-
-// Called every frame
-void UPOSTFootstepComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UPOSTFootstepComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
-}
-
-void UPOSTFootstepComponent::PlayFootstep()
-{
-    ACharacter* Character = Cast<ACharacter>(GetOwner());
-    if (!Character) return;
-
-    UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
-    if (!Movement) return;
-
-    const float Speed = Character->GetVelocity().Size2D();
-
-    if (Speed < MinSpeedToPlay) return;
-    if (!Movement->IsMovingOnGround()) return;
-
-    if (SnowFootstepSounds.Num() > 0)
+    if (GetWorld())
     {
-        const int32 RandomIndex = FMath::RandRange(0, SnowFootstepSounds.Num() - 1);
+        GetWorld()->GetTimerManager().ClearTimer(FootstepTimerHandle);
+    }
 
-        USoundBase* SelectedSound = SnowFootstepSounds[RandomIndex];
+    Super::EndPlay(EndPlayReason);
+}
 
-        if (SelectedSound)
-        {
-            UGameplayStatics::PlaySoundAtLocation(
-                this,
-                SelectedSound,
-                Character->GetActorLocation()
-            );
-        }
+void UPOSTFootstepComponent::SetFootstepsEnabled(bool bEnabled)
+{
+    bFootstepsEnabled = bEnabled;
+
+    if (!GetWorld())
+    {
+        return;
+    }
+
+    GetWorld()->GetTimerManager().ClearTimer(FootstepTimerHandle);
+    if (bFootstepsEnabled)
+    {
+        ScheduleNextFootstep(GetCurrentStepInterval());
+    }
+}
+
+void UPOSTFootstepComponent::ScheduleNextFootstep(float Delay)
+{
+    if (!GetWorld() || !bFootstepsEnabled)
+    {
+        return;
     }
 
     GetWorld()->GetTimerManager().SetTimer(
         FootstepTimerHandle,
         this,
-        &UPOSTFootstepComponent::PlayFootstep,
-        GetCurrentStepInterval(),
-        true
-    );
+        &UPOSTFootstepComponent::TryPlayFootstep,
+        FMath::Max(0.05f, Delay),
+        false);
 }
 
-float UPOSTFootstepComponent::GetCurrentStepInterval()
+void UPOSTFootstepComponent::TryPlayFootstep()
 {
-    const APOSTCharacter* Character = Cast<APOSTCharacter>(GetOwner());
-
-    if (Character && Character->IsRunning())
+    ACharacter* Character = Cast<ACharacter>(GetOwner());
+    if (!Character)
     {
-        return RunStepInterval;
+        ScheduleNextFootstep(WalkStepInterval);
+        return;
     }
 
-    return WalkStepInterval;
+    UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
+    if (!Movement)
+    {
+        ScheduleNextFootstep(WalkStepInterval);
+        return;
+    }
+
+    const float Speed = Character->GetVelocity().Size2D();
+    if (Speed >= MinSpeedToPlay && Movement->IsMovingOnGround() && SnowFootstepSounds.Num() > 0)
+    {
+        const int32 RandomIndex = FMath::RandRange(0, SnowFootstepSounds.Num() - 1);
+        if (USoundBase* SelectedSound = SnowFootstepSounds[RandomIndex])
+        {
+            UGameplayStatics::PlaySoundAtLocation(this, SelectedSound, Character->GetActorLocation());
+        }
+    }
+
+    ScheduleNextFootstep(GetCurrentStepInterval());
 }
 
+float UPOSTFootstepComponent::GetCurrentStepInterval() const
+{
+    const APOSTCharacter* Character = Cast<APOSTCharacter>(GetOwner());
+    return Character && Character->IsRunning() ? RunStepInterval : WalkStepInterval;
+}

@@ -15,13 +15,23 @@ void UPOSTTemperatureComponent::BeginPlay()
 void UPOSTTemperatureComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-    const float Rate = bIsInWarmZone ? HeatingPerSecond : -CoolingPerSecond;
+    const float Rate = WarmZoneCount > 0 ? HeatingPerSecond : -CoolingPerSecond;
     SetTemperature(CurrentTemperature + Rate * DeltaTime);
 }
 
 void UPOSTTemperatureComponent::SetInWarmZone(bool bIsInZone)
 {
-    bIsInWarmZone = bIsInZone;
+    WarmZoneCount = bIsInZone ? 1 : 0;
+}
+
+void UPOSTTemperatureComponent::AddWarmZone()
+{
+    ++WarmZoneCount;
+}
+
+void UPOSTTemperatureComponent::RemoveWarmZone()
+{
+    WarmZoneCount = FMath::Max(0, WarmZoneCount - 1);
 }
 
 void UPOSTTemperatureComponent::AddTemperature(float Amount)

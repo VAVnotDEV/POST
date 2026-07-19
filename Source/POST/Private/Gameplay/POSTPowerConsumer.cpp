@@ -45,8 +45,8 @@ void APOSTPowerConsumer::SetGenerator(APOSTGenerator* NewGenerator)
 void APOSTPowerConsumer::BindGenerator()
 {
     if (!Generator) return;
-    Generator->OnStateChanged.AddDynamic(this, &APOSTPowerConsumer::HandleGeneratorStateChanged);
-    Generator->OnFuelChanged.AddDynamic(this, &APOSTPowerConsumer::HandleGeneratorFuelChanged);
+    Generator->OnStateChanged.AddUniqueDynamic(this, &APOSTPowerConsumer::HandleGeneratorStateChanged);
+    Generator->OnFuelChanged.AddUniqueDynamic(this, &APOSTPowerConsumer::HandleGeneratorFuelChanged);
 }
 
 void APOSTPowerConsumer::UnbindGenerator()

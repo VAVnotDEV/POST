@@ -7,41 +7,44 @@
 #include "FlashLightItem.generated.h"
 
 class USoundBase;
+class UStaticMeshComponent;
+class USpotLightComponent;
 
-UCLASS()
+UCLASS(Blueprintable)
 class POST_API AFlashLightItem : public AActor
 {
-	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
-	AFlashLightItem();	void ToggleFlashLight();
+    GENERATED_BODY()
 
+public:
+    AFlashLightItem();
+
+    UFUNCTION(BlueprintCallable, Category="POST|Flashlight")
+    void ToggleFlashLight();
+
+    UFUNCTION(BlueprintCallable, Category="POST|Flashlight")
+    void SetFlashLightEnabled(bool bEnabled, bool bPlaySound = false);
+
+    UFUNCTION(BlueprintPure, Category="POST|Flashlight")
+    bool IsOn() const { return bIsFlashlightOn; }
 
 protected:
-	// Called when the game starts or when spawned
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component")
-	class UStaticMeshComponent* FlashlightStaticMesh;
+    virtual void BeginPlay() override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component")
-	class USpotLightComponent* LightComponent;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|Flashlight")
+    UStaticMeshComponent* FlashlightStaticMesh = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, CAtegory = "Sound")
-	USoundBase* ToggleSound;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|Flashlight")
+    USpotLightComponent* LightComponent = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
-	bool bIsFlashlightOn;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
-	float MaxIntensity = 300.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
-	float MinIntensity = 0.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Flashlight|Sound")
+    USoundBase* ToggleSound = nullptr;
 
-	bool isOn() const { return bIsFlashlightOn; }
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Flashlight")
+    bool bStartEnabled = false;
 
-	virtual void BeginPlay() override;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|Flashlight")
+    bool bIsFlashlightOn = false;
 
-private:
-	void setFlashLightEnabled();
-	void setFlashLightDisabled();
-
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Flashlight", meta=(ClampMin="0.0"))
+    float MaxIntensity = 300.0f;
 };

@@ -10,60 +10,95 @@ class ASkyLight;
 class ADirectionalLight;
 class APostProcessVolume;
 class AExponentialHeightFog;
+class APOSTGameState;
 
-UCLASS()
+UCLASS(Blueprintable)
 class POST_API APOSTDayNightController : public AActor
 {
-	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
-	APOSTDayNightController();
+    GENERATED_BODY()
 
-	void Night();
+public:
+    APOSTDayNightController();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TimeOfDay")
-	bool bIsNight = false;
+    UFUNCTION(BlueprintCallable, Category="POST|TimeOfDay")
+    void ApplyCurrentState();
+
+    UFUNCTION(BlueprintCallable, Category="POST|TimeOfDay")
+    void SetNight(bool bNewNight);
+
+    UFUNCTION(BlueprintPure, Category="POST|TimeOfDay")
+    bool IsNight() const { return bIsNight; }
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
-	AActor* SkySphereActor;
+    virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	UPROPERTY(EditAnywhere, Category = "Components")
-	ASkyLight* SkyLight;
-	
-	UPROPERTY(EditAnywhere, Category = "Components")
-	ADirectionalLight* DirectionalLight;
-	
-	UPROPERTY(EditAnywhere, Category = "Components")
-	APostProcessVolume* PostProcess;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="POST|TimeOfDay")
+    bool bIsNight = false;
 
-	UPROPERTY(EditAnywhere, Category = "Components")
-	AExponentialHeightFog* HeightFog;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|TimeOfDay")
+    bool bFollowGameTime = true;
 
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+    UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category="POST|References")
+    AActor* SkySphereActor = nullptr;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+    UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category="POST|References")
+    ASkyLight* SkyLight = nullptr;
+
+    UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category="POST|References")
+    ADirectionalLight* DirectionalLight = nullptr;
+
+    UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category="POST|References")
+    APostProcessVolume* PostProcess = nullptr;
+
+    UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category="POST|References")
+    AExponentialHeightFog* HeightFog = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Day")
+    FRotator DaySunRotation = FRotator(-45.0f, 0.0f, 0.0f);
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Day")
+    float DayExposure = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Day", meta=(ClampMin="0.0"))
+    float DayDirectionalLightIntensity = 5.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Day", meta=(ClampMin="0.0"))
+    float DaySkyLightIntensity = 1.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Day")
+    bool bDayFogVisible = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Day")
+    FLinearColor DayFogColor = FLinearColor::White;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Night")
+    FRotator NightSunRotation = FRotator(90.0f, 0.0f, 0.0f);
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Night")
+    float NightExposure = -1.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Night", meta=(ClampMin="0.0"))
+    float NightDirectionalLightIntensity = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Night", meta=(ClampMin="0.0"))
+    float NightSkyLightIntensity = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Night")
+    bool bNightFogVisible = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Night")
+    FLinearColor NightFogColor = FLinearColor(0.02f, 0.03f, 0.05f);
 
 private:
-	UPROPERTY(EditAnywhere, Category = "Light")
-	FRotator SunPosition = FRotator(-45.0f, 0.0f, 0.0f);
-	
-	UPROPERTY(EditAnywhere, Category = "Light")
-	float Exposure = 0.0f;
-	
-	UPROPERTY(EditAnywhere, Category = "Light")
-	float DirectionLightIntensity = 5.0f;
-	
-	UPROPERTY(EditAnywhere, Category = "Light")
-	float SkyLightIntensity = 1.0f;
-	
-	UPROPERTY(EditAnywhere, Category = "Light")
-	bool HeightFogVisibility = true;
+    UPROPERTY()
+    APOSTGameState* CachedGameState = nullptr;
 
-	UPROPERTY(EditAnywhere, Category = "Light")
-	FLinearColor FogColor = FLinearColor::White;
+    UFUNCTION()
+    void HandleNightStarted();
+
+    UFUNCTION()
+    void HandleDayStarted();
+
+    void RefreshSkySphereMaterial() const;
 };

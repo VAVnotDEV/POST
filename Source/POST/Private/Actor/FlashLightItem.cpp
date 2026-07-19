@@ -1,6 +1,5 @@
 // Copyright (c) 2026 VAVnotDev. All Rights Reserved.
 
-
 #include "Actor/FlashLightItem.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -8,53 +7,43 @@
 #include "Sound/SoundBase.h"
 #include "Kismet/GameplayStatics.h"
 
-// Sets default values
 AFlashLightItem::AFlashLightItem()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	//PrimaryActorTick.bCanEverTick = true;
-	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
+    PrimaryActorTick.bCanEverTick = false;
 
-	FlashlightStaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FlashLightStaticMesh"));
-	FlashlightStaticMesh->SetupAttachment(GetRootComponent());
-	FlashlightStaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	FlashlightStaticMesh->SetGenerateOverlapEvents(false);
+    RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
 
-	LightComponent = CreateDefaultSubobject<USpotLightComponent>(TEXT("LightComponent"));
-	LightComponent->SetupAttachment(GetRootComponent());
-	LightComponent->SetIntensity(MinIntensity);
+    FlashlightStaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FlashLightStaticMesh"));
+    FlashlightStaticMesh->SetupAttachment(GetRootComponent());
+    FlashlightStaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    FlashlightStaticMesh->SetGenerateOverlapEvents(false);
+
+    LightComponent = CreateDefaultSubobject<USpotLightComponent>(TEXT("LightComponent"));
+    LightComponent->SetupAttachment(GetRootComponent());
+    LightComponent->SetIntensity(0.0f);
+}
+
+void AFlashLightItem::BeginPlay()
+{
+    Super::BeginPlay();
+    SetFlashLightEnabled(bStartEnabled, false);
 }
 
 void AFlashLightItem::ToggleFlashLight()
 {
-	UE_LOG(LogTemp, Warning, TEXT("FlashLight: Call Toggle"));
-	bIsFlashlightOn = !bIsFlashlightOn;
-
-	if (ToggleSound)
-		UGameplayStatics::PlaySoundAtLocation(this, ToggleSound, GetActorLocation());
-
-	if (bIsFlashlightOn)
-		setFlashLightEnabled();
-	else
-		setFlashLightDisabled();
+    SetFlashLightEnabled(!bIsFlashlightOn, true);
 }
 
-void AFlashLightItem::setFlashLightEnabled()
+void AFlashLightItem::SetFlashLightEnabled(bool bEnabled, bool bPlaySound)
 {
-	if (!LightComponent) return;
-	
-	LightComponent->SetIntensity(MaxIntensity);		
+    if (!LightComponent) return;
+    if (bIsFlashlightOn == bEnabled && LightComponent->Intensity == (bEnabled ? MaxIntensity : 0.0f)) return;
+
+    bIsFlashlightOn = bEnabled;
+    LightComponent->SetIntensity(bIsFlashlightOn ? MaxIntensity : 0.0f);
+
+    if (bPlaySound && ToggleSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, ToggleSound, GetActorLocation());
+    }
 }
-
-void AFlashLightItem::setFlashLightDisabled()
-{
-	LightComponent->SetIntensity(MinIntensity);
-}
-
-// Called when the game starts or when spawned
-void AFlashLightItem::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
-

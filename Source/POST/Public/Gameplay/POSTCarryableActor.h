@@ -15,13 +15,14 @@ class POST_API APOSTCarryableActor : public AActor, public IInteractable
 
 public:
     APOSTCarryableActor();
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
     virtual bool CanInteract_Implementation(AActor* Interactor) const override;
     virtual FText GetInteractText_Implementation(AActor* Interactor) const override;
     virtual void Interact_Implementation(AActor* Interactor) override;
 
     UFUNCTION(BlueprintCallable, Category="POST|Carry")
-    void AttachToCharacter(APOSTCharacter* Character);
+    bool AttachToCharacter(APOSTCharacter* Character);
 
     UFUNCTION(BlueprintCallable, Category="POST|Carry")
     void Drop();

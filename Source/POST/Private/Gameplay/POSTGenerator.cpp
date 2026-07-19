@@ -57,6 +57,7 @@ void APOSTGenerator::SimulateGameMinute()
 
     if (Fuel <= KINDA_SMALL_NUMBER)
     {
+        Fuel = 0.0f;
         StopGenerator();
         return;
     }
@@ -71,7 +72,22 @@ void APOSTGenerator::SimulateGameMinute()
 
 bool APOSTGenerator::StartGenerator()
 {
-    if (State == EPOSTGeneratorState::Broken || Fuel <= KINDA_SMALL_NUMBER) return false;
+    if (State == EPOSTGeneratorState::Running)
+    {
+        return true;
+    }
+
+    if (State == EPOSTGeneratorState::Broken || Fuel <= KINDA_SMALL_NUMBER)
+    {
+        return false;
+    }
+
+    if (Condition <= KINDA_SMALL_NUMBER)
+    {
+        BreakGenerator();
+        return false;
+    }
+
     SetState(EPOSTGeneratorState::Running);
     OnGeneratorStarted();
     return true;
@@ -79,14 +95,22 @@ bool APOSTGenerator::StartGenerator()
 
 void APOSTGenerator::StopGenerator()
 {
-    if (State == EPOSTGeneratorState::Stopped) return;
+    if (State != EPOSTGeneratorState::Running)
+    {
+        return;
+    }
+
     SetState(EPOSTGeneratorState::Stopped);
     OnGeneratorStopped();
 }
 
 void APOSTGenerator::BreakGenerator()
 {
-    if (State == EPOSTGeneratorState::Broken) return;
+    if (State == EPOSTGeneratorState::Broken)
+    {
+        return;
+    }
+
     SetState(EPOSTGeneratorState::Broken);
     OnGeneratorBroken();
 }

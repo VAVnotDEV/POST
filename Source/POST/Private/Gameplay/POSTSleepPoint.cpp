@@ -33,13 +33,12 @@ FText APOSTSleepPoint::GetInteractText_Implementation(AActor* Interactor) const
 void APOSTSleepPoint::Interact_Implementation(AActor* Interactor)
 {
     if (!CanInteract_Implementation(Interactor)) return;
-    if (Director) Director->SaveProgress();
-
     if (APOSTGameState* GameState = GetWorld() ? GetWorld()->GetGameState<APOSTGameState>() : nullptr)
     {
         const int32 NextDay = GameState->GetDay() + 1;
         GameState->SetGameTime(NextDay, WakeHour, 0, 0);
     }
 
+    if (Director) Director->SaveProgress();
     OnSleepRequested(Interactor);
 }

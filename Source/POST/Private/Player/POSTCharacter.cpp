@@ -12,13 +12,14 @@
 #include "Components/POSTStaminaComponent.h"
 #include "Components/POSTTemperatureComponent.h"
 #include "Components/SceneComponent.h"
-#include "Components/TextRenderComponent.h"
 #include "Gameplay/POSTCarryableActor.h"
+#include "Gameplay/POSTGameDirector.h"
+#include "Kismet/GameplayStatics.h"
 
 APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
     : Super(ObjInit.SetDefaultSubobjectClass<UPOSTMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
-    PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = true;
 
     GetCapsuleComponent()->InitCapsuleSize(42.0f, 88.0f);
 
@@ -40,11 +41,6 @@ APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
     InteractionComponent = CreateDefaultSubobject<UPOSTInteractionComponent>(TEXT("InteractionComponent"));
     FootstepComponent = CreateDefaultSubobject<UPOSTFootstepComponent>(TEXT("FootstepComponent"));
 
-    StaminaTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("StaminaTextComponent"));
-    StaminaTextComponent->SetupAttachment(GetRootComponent());
-
-    TemperatureTextComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("TemperatureTextComponent"));
-    TemperatureTextComponent->SetupAttachment(GetRootComponent());
 }
 
 void APOSTCharacter::BeginPlay()
@@ -52,17 +48,19 @@ void APOSTCharacter::BeginPlay()
     Super::BeginPlay();
 
     SpawnFlashlight();
-    OnBodyTemperatureChanged(TemperatureComponent->GetCurrentTemperature());
-    OnStaminaChanged(StaminaComponent->GetCurrentStamina());
-
-    TemperatureComponent->OnBodyTemperatureChanged.AddDynamic(this, &APOSTCharacter::OnBodyTemperatureChanged);
     TemperatureComponent->OnPlayerFrozen.AddDynamic(this, &APOSTCharacter::HandleFrozen);
-    StaminaComponent->OnStaminaChanged.AddDynamic(this, &APOSTCharacter::OnStaminaChanged);
 }
 
 void APOSTCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+    UpdateStaminaUsage();
+}
+
+void APOSTCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    DropCarriedActor();
+    Super::EndPlay(EndPlayReason);
 }
 
 void APOSTCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -133,13 +131,30 @@ bool APOSTCharacter::IsRunning() const
 void APOSTCharacter::OnStartRunning()
 {
     bWantsToRun = true;
-    StaminaComponent->StartSpendStamina();
+    UpdateStaminaUsage();
 }
 
 void APOSTCharacter::OnStopRunning()
 {
     bWantsToRun = false;
-    StaminaComponent->StopSpendStamina();
+    UpdateStaminaUsage();
+}
+
+void APOSTCharacter::UpdateStaminaUsage()
+{
+    if (!StaminaComponent)
+    {
+        return;
+    }
+
+    if (IsRunning())
+    {
+        StaminaComponent->StartSpendStamina();
+    }
+    else
+    {
+        StaminaComponent->StopSpendStamina();
+    }
 }
 
 void APOSTCharacter::TryInteract()
@@ -152,20 +167,25 @@ void APOSTCharacter::TryInteract()
 
 bool APOSTCharacter::TryCarry(APOSTCarryableActor* Actor)
 {
-    if (!Actor || CarriedActor)
+    if (!IsValid(Actor) || IsValid(CarriedActor) || Actor->IsCarried())
+    {
+        return false;
+    }
+
+    if (!Actor->AttachToCharacter(this))
     {
         return false;
     }
 
     CarriedActor = Actor;
-    Actor->AttachToCharacter(this);
     return true;
 }
 
 void APOSTCharacter::DropCarriedActor()
 {
-    if (!CarriedActor)
+    if (!IsValid(CarriedActor))
     {
+        CarriedActor = nullptr;
         return;
     }
 
@@ -174,23 +194,25 @@ void APOSTCharacter::DropCarriedActor()
     ActorToDrop->Drop();
 }
 
-void APOSTCharacter::OnBodyTemperatureChanged(float NewTemp)
+void APOSTCharacter::NotifyCarriedActorReleased(APOSTCarryableActor* Actor)
 {
-    if (TemperatureTextComponent)
+    if (CarriedActor == Actor)
     {
-        TemperatureTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Temp: %.0f"), NewTemp)));
+        CarriedActor = nullptr;
     }
 }
 
-void APOSTCharacter::OnStaminaChanged(float NewStamina)
-{
-    if (StaminaTextComponent)
-    {
-        StaminaTextComponent->SetText(FText::FromString(FString::Printf(TEXT("Stamina: %.0f"), NewStamina)));
-    }
-}
 
 void APOSTCharacter::HandleFrozen()
 {
-    UE_LOG(LogTemp, Warning, TEXT("Player frozen. Director should register a cold reboot."));
+    APOSTGameDirector* Director = Cast<APOSTGameDirector>(
+        UGameplayStatics::GetActorOfClass(this, APOSTGameDirector::StaticClass()));
+
+    if (!Director)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Player froze, but POSTGameDirector was not found in the level."));
+        return;
+    }
+
+    Director->RegisterDeath(EPOSTDeathCause::Cold);
 }

@@ -50,6 +50,7 @@ public:
     UFUNCTION(BlueprintPure, Category="POST|Director") float GetGeneratorReliabilityMultiplier() const { return GeneratorReliabilityMultiplier; }
     UFUNCTION(BlueprintPure, Category="POST|Director") EPOSTDeathCause GetLastDeathCause() const { return LastDeathCause; }
     UFUNCTION(BlueprintPure, Category="POST|Director") float GetThreatLevel() const { return ThreatLevel; }
+    UFUNCTION(BlueprintPure, Category="POST|Director") bool IsRebootInProgress() const { return bRebootInProgress; }
 
     UFUNCTION(BlueprintCallable, Category="POST|Director") bool SetStoryStage(EPOSTStoryStage NewStage);
     UFUNCTION(BlueprintCallable, Category="POST|Director") bool AdvanceStoryStage(EPOSTStoryStage ExpectedCurrentStage, EPOSTStoryStage NewStage);
@@ -62,6 +63,9 @@ public:
     UFUNCTION(BlueprintCallable, Category="POST|Director|Entity") void SetEntityLocation(FVector NewLocation);
     UFUNCTION(BlueprintCallable, Category="POST|Director|Anomaly") bool ActivateAnomalyByName(FName ActorName);
     UFUNCTION(BlueprintCallable, Category="POST|Director|Anomaly") bool TryActivateNearbyAnomaly();
+    UFUNCTION(BlueprintPure, Category="POST|Director|Anomaly") bool CanStartAnomaly(const APOSTAnomaly* Anomaly) const;
+    void NotifyAnomalyStarted(APOSTAnomaly* Anomaly);
+    void NotifyAnomalyStopped(APOSTAnomaly* Anomaly);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Save") FString SaveSlotName = TEXT("POST_Autosave");
@@ -70,11 +74,15 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Reboot", meta=(ClampMin="0.0", ClampMax="1.0")) float ReliabilityLossPerReboot = 0.05f;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Reboot") float MinimumResourceMultiplier = 0.35f;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Reboot") float MinimumReliabilityMultiplier = 0.45f;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Reboot", meta=(ClampMin="0.0")) float RebootDelay = 1.5f;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Reboot") bool bReloadCurrentLevelOnDeath = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Radio") TArray<FPOSTRadioMessage> RadioMessages;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity", meta=(ClampMin="100.0")) float ThreatRadius = 3000.0f;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Anomaly", meta=(ClampMin="0.0", ClampMax="1.0")) float MinimumThreatForAnomaly = 0.4f;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Anomaly", meta=(ClampMin="0.1")) float DirectorUpdateInterval = 0.25f;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Anomaly", meta=(ClampMin="0.0")) float GlobalAnomalyCooldown = 5.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Anomaly", meta=(ClampMin="1")) int32 MaxConcurrentAnomalies = 1;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|State") EPOSTStoryStage StoryStage = EPOSTStoryStage::Arrival;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|State") int32 RebootCount = 0;
@@ -89,11 +97,22 @@ protected:
 private:
     void CacheWorldReferences();
     void UpdateDirector();
+    void ExecuteWorldReboot();
+    void ApplySavedWorldState();
 
     UPROPERTY(Transient) APOSTCharacter* Player = nullptr;
     UPROPERTY(Transient) TArray<APOSTAnomaly*> Anomalies;
+    UPROPERTY(Transient) TArray<APOSTAnomaly*> ActiveAnomalies;
     UPROPERTY(Transient) TSet<FName> PlayedRadioMessages;
 
     FVector EntityLocation = FVector::ZeroVector;
     FTimerHandle DirectorTimer;
+    FTimerHandle RebootTimer;
+    bool bRebootInProgress = false;
+    float LastAnomalyFinishedWorldTime = -1.0f;
+    bool bHasSavedWorldTime = false;
+    int32 SavedDay = 1;
+    int32 SavedHours = 21;
+    int32 SavedMinutes = 0;
+    int32 SavedSeconds = 0;
 };

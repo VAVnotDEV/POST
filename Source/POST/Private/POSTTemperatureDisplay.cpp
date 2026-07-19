@@ -45,6 +45,17 @@ void APOSTTemperatureDisplay::BeginPlay()
 	}
 }
 
+void APOSTTemperatureDisplay::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (WeatherManager)
+	{
+		WeatherManager->OnTemperatureChanged.RemoveAll(this);
+	}
+
+	WeatherManager = nullptr;
+	Super::EndPlay(EndPlayReason);
+}
+
 // Called every frame
 void APOSTTemperatureDisplay::Tick(float DeltaTime)
 {

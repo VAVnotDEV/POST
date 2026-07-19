@@ -6,35 +6,57 @@
 #include "GameFramework/Actor.h"
 #include "POSTWeatherManager.generated.h"
 
+class APOSTGameState;
+
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnTemperatureChanged, float);
 
-UCLASS()
+UCLASS(Blueprintable)
 class POST_API APOSTWeatherManager : public AActor
 {
-	GENERATED_BODY()
-	
-public:	
-	// Sets default values for this actor's properties
-	APOSTWeatherManager();
-	FOnTemperatureChanged OnTemperatureChanged;
+    GENERATED_BODY()
+
+public:
+    APOSTWeatherManager();
+
+    FOnTemperatureChanged OnTemperatureChanged;
+
+    UFUNCTION(BlueprintPure, Category="POST|Weather")
+    float GetOutdoorTemperature() const;
+
+    UFUNCTION(BlueprintCallable, Category="POST|Weather")
+    void UpdateOutdoorTemperature();
+
+    UFUNCTION(BlueprintCallable, Category="POST|Weather")
+    void SetWeatherModifier(float NewModifier);
+
+    UFUNCTION(BlueprintPure, Category="POST|Weather")
+    float GetWeatherModifier() const { return WeatherModifier; }
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-	
-	UPROPERTY(EditAnywhere)
-	float BaseTemperature = -25.0f;
-	
-	UPROPERTY(EditAnywhere)
-	float DayModifier = 5.0f;
-	
-	UPROPERTY(EditAnywhere)
-	float NightModifier = -10.0f;
+    virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Weather")
+    float BaseTemperature = -25.0f;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-	float GetOutdoorTemperature() const;
-	void UpdateOutdoorTemperature();
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Weather")
+    float DayModifier = 5.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Weather")
+    float NightModifier = -10.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Weather")
+    float WeatherModifier = 0.0f;
+
+private:
+    UPROPERTY()
+    APOSTGameState* CachedGameState = nullptr;
+
+    float CachedOutdoorTemperature = TNumericLimits<float>::Lowest();
+
+    UFUNCTION()
+    void HandleHourChanged(int32 NewHour);
+
+    UFUNCTION()
+    void HandleDayNightChanged();
 };

@@ -1,61 +1,85 @@
 // Copyright (c) 2026 VAVnotDev. All Rights Reserved.
 
-
 #include "POSTWeatherManager.h"
 #include "POSTGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "POSTLog.h"
-#include "TimerManager.h"
 
-// Sets default values
 APOSTWeatherManager::APOSTWeatherManager()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
+    PrimaryActorTick.bCanEverTick = false;
 }
 
-// Called when the game starts or when spawned
 void APOSTWeatherManager::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 
-	FTimerHandle TimerHandle;
-	//GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &APOSTWeatherManager::UpdateOutdoorTemperature, 2.0f, false);
-	
+    CachedGameState = Cast<APOSTGameState>(UGameplayStatics::GetGameState(this));
+    if (CachedGameState)
+    {
+        CachedGameState->OnHourChanged.AddDynamic(this, &APOSTWeatherManager::HandleHourChanged);
+        CachedGameState->OnNightStarted.AddDynamic(this, &APOSTWeatherManager::HandleDayNightChanged);
+        CachedGameState->OnDayStarted.AddDynamic(this, &APOSTWeatherManager::HandleDayNightChanged);
+    }
+
+    UpdateOutdoorTemperature();
 }
 
-// Called every frame
-void APOSTWeatherManager::Tick(float DeltaTime)
+void APOSTWeatherManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::Tick(DeltaTime);
+    if (CachedGameState)
+    {
+        CachedGameState->OnHourChanged.RemoveDynamic(this, &APOSTWeatherManager::HandleHourChanged);
+        CachedGameState->OnNightStarted.RemoveDynamic(this, &APOSTWeatherManager::HandleDayNightChanged);
+        CachedGameState->OnDayStarted.RemoveDynamic(this, &APOSTWeatherManager::HandleDayNightChanged);
+    }
 
+    CachedGameState = nullptr;
+    Super::EndPlay(EndPlayReason);
 }
 
 float APOSTWeatherManager::GetOutdoorTemperature() const
 {
-	
-	const APOSTGameState* POSTGameState = Cast<APOSTGameState>(UGameplayStatics::GetGameState(GetWorld()));
-	
-	float result = BaseTemperature;
-	
-	if (!POSTGameState) { return result; }
+    const APOSTGameState* GameState = CachedGameState;
+    if (!GameState)
+    {
+        GameState = Cast<APOSTGameState>(UGameplayStatics::GetGameState(this));
+    }
 
-	if (POSTGameState->IsNight())
-		result = BaseTemperature + NightModifier;
-
-	else
-		result = BaseTemperature + DayModifier;
-
-
-
-	return result;
+    const float TimeModifier = GameState && GameState->IsNight() ? NightModifier : DayModifier;
+    return BaseTemperature + TimeModifier + WeatherModifier;
 }
 
 void APOSTWeatherManager::UpdateOutdoorTemperature()
 {
-	float temp = GetOutdoorTemperature();
-	UE_LOG(LogPOST, Display, TEXT("WM: %f"), temp)
-		OnTemperatureChanged.Broadcast(temp);
+    const float NewTemperature = GetOutdoorTemperature();
+    if (FMath::IsNearlyEqual(NewTemperature, CachedOutdoorTemperature))
+    {
+        return;
+    }
+
+    CachedOutdoorTemperature = NewTemperature;
+    UE_LOG(LogPOST, Display, TEXT("Weather temperature changed: %.1f C"), NewTemperature);
+    OnTemperatureChanged.Broadcast(NewTemperature);
 }
 
+void APOSTWeatherManager::SetWeatherModifier(float NewModifier)
+{
+    if (FMath::IsNearlyEqual(WeatherModifier, NewModifier))
+    {
+        return;
+    }
+
+    WeatherModifier = NewModifier;
+    UpdateOutdoorTemperature();
+}
+
+void APOSTWeatherManager::HandleHourChanged(int32 NewHour)
+{
+    UpdateOutdoorTemperature();
+}
+
+void APOSTWeatherManager::HandleDayNightChanged()
+{
+    UpdateOutdoorTemperature();
+}

@@ -19,6 +19,12 @@ void APOSTStoryTrigger::BeginPlay()
         Director = Cast<APOSTGameDirector>(UGameplayStatics::GetActorOfClass(this, APOSTGameDirector::StaticClass()));
     }
     Trigger->OnComponentBeginOverlap.AddDynamic(this, &APOSTStoryTrigger::HandleOverlap);
+
+    if (bDisableAfterTrigger && Director &&
+        static_cast<uint8>(Director->GetStoryStage()) >= static_cast<uint8>(NextStage))
+    {
+        Trigger->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    }
 }
 
 void APOSTStoryTrigger::HandleOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,

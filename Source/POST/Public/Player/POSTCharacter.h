@@ -10,7 +10,6 @@ class AFlashLightItem;
 class APOSTCarryableActor;
 class UCameraComponent;
 class USceneComponent;
-class UTextRenderComponent;
 class UPOSTTemperatureComponent;
 class UPOSTStaminaComponent;
 class UPOSTInteractionComponent;
@@ -26,6 +25,7 @@ public:
     APOSTCharacter(const FObjectInitializer& ObjInit);
 
     virtual void Tick(float DeltaTime) override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
     UFUNCTION(BlueprintPure, Category="POST|Movement")
@@ -40,6 +40,9 @@ public:
     UFUNCTION(BlueprintPure, Category="POST|Components")
     UPOSTRadioComponent* GetRadioComponent() const { return RadioComponent; }
 
+    UFUNCTION(BlueprintPure, Category="POST|Components")
+    UPOSTInteractionComponent* GetInteractionComponent() const { return InteractionComponent; }
+
     UFUNCTION(BlueprintPure, Category="POST|Carry")
     USceneComponent* GetCarryPoint() const { return CarryPoint; }
 
@@ -51,6 +54,8 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="POST|Carry")
     void DropCarriedActor();
+
+    void NotifyCarriedActorReleased(APOSTCarryableActor* Actor);
 
 protected:
     virtual void BeginPlay() override;
@@ -69,12 +74,6 @@ protected:
 
     UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category="FlashLight")
     AFlashLightItem* FlashlightActor = nullptr;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-    UTextRenderComponent* StaminaTextComponent = nullptr;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-    UTextRenderComponent* TemperatureTextComponent = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
     UPOSTInteractionComponent* InteractionComponent = nullptr;
@@ -99,12 +98,7 @@ private:
     void OnStartRunning();
     void OnStopRunning();
     void TryInteract();
-
-    UFUNCTION()
-    void OnBodyTemperatureChanged(float NewTemp);
-
-    UFUNCTION()
-    void OnStaminaChanged(float NewStamina);
+    void UpdateStaminaUsage();
 
     UFUNCTION()
     void HandleFrozen();

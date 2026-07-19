@@ -6,41 +6,40 @@
 #include "Components/ActorComponent.h"
 #include "POSTFootstepComponent.generated.h"
 
-
 class USoundBase;
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup=(POST), meta=(BlueprintSpawnableComponent))
 class POST_API UPOSTFootstepComponent : public UActorComponent
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-public:	
-	// Sets default values for this component's properties
-	UPOSTFootstepComponent();
+public:
+    UPOSTFootstepComponent();
+
+    UFUNCTION(BlueprintCallable, Category="POST|Footsteps")
+    void SetFootstepsEnabled(bool bEnabled);
 
 protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+    virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
-	UPROPERTY(EditAnywhere, Category = "Sound")
-	TArray<USoundBase*> SnowFootstepSounds;
+    UPROPERTY(EditAnywhere, Category="POST|Footsteps")
+    TArray<USoundBase*> SnowFootstepSounds;
 
-	UPROPERTY(EditAnywhere, Category = "Footsteps")
-	float WalkStepInterval = 0.55f;
+    UPROPERTY(EditAnywhere, Category="POST|Footsteps", meta=(ClampMin="0.05"))
+    float WalkStepInterval = 0.55f;
 
-	UPROPERTY(EditAnywhere, Category = "Footsteps")
-	float RunStepInterval = 0.35f;
+    UPROPERTY(EditAnywhere, Category="POST|Footsteps", meta=(ClampMin="0.05"))
+    float RunStepInterval = 0.35f;
 
-	UPROPERTY(EditAnywhere, Category = "Footsteps")
-	float MinSpeedToPlay = 10.0f;
+    UPROPERTY(EditAnywhere, Category="POST|Footsteps", meta=(ClampMin="0.0"))
+    float MinSpeedToPlay = 10.0f;
 
-	FTimerHandle FootstepTimerHandle;
+    FTimerHandle FootstepTimerHandle;
+    bool bFootstepsEnabled = true;
 
-	void PlayFootstep();
-	float GetCurrentStepInterval();
+    void ScheduleNextFootstep(float Delay);
+    void TryPlayFootstep();
+    float GetCurrentStepInterval() const;
 };

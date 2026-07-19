@@ -34,19 +34,48 @@ void APOSTCarryableActor::Interact_Implementation(AActor* Interactor)
     }
 }
 
-void APOSTCarryableActor::AttachToCharacter(APOSTCharacter* Character)
+bool APOSTCarryableActor::AttachToCharacter(APOSTCharacter* Character)
 {
-    if (!Character || !Character->GetCarryPoint())
+    if (!IsValid(Character) || !Character->GetCarryPoint() || bIsCarried || !Mesh)
     {
-        return;
+        return false;
+    }
+
+    Mesh->SetSimulatePhysics(false);
+    Mesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+    Mesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+    Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+    AttachToComponent(
+        Character->GetCarryPoint(),
+        FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+
+    const bool bAttached = GetRootComponent() &&
+        GetRootComponent()->GetAttachParent() == Character->GetCarryPoint();
+
+    if (!bAttached)
+    {
+        Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        Mesh->SetSimulatePhysics(true);
+        return false;
     }
 
     Carrier = Character;
     bIsCarried = true;
-    Mesh->SetSimulatePhysics(false);
-    Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    AttachToComponent(Character->GetCarryPoint(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
     OnPickedUp(Character);
+    return true;
+}
+
+void APOSTCarryableActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (IsValid(Carrier))
+    {
+        Carrier->NotifyCarriedActorReleased(this);
+    }
+
+    Carrier = nullptr;
+    bIsCarried = false;
+    Super::EndPlay(EndPlayReason);
 }
 
 void APOSTCarryableActor::Drop()
@@ -59,7 +88,14 @@ void APOSTCarryableActor::Drop()
     DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
     Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
     Mesh->SetSimulatePhysics(true);
+    APOSTCharacter* PreviousCarrier = Carrier;
     Carrier = nullptr;
     bIsCarried = false;
+
+    if (IsValid(PreviousCarrier))
+    {
+        PreviousCarrier->NotifyCarriedActorReleased(this);
+    }
+
     OnDropped();
 }

@@ -26,6 +26,15 @@ public:
     UFUNCTION(BlueprintCallable, Category="POST|Interaction")
     void UpdateInteractActor();
 
+    UFUNCTION(BlueprintCallable, Category="POST|Interaction")
+    void SetInteractionEnabled(bool bEnabled);
+
+    UFUNCTION(BlueprintPure, Category="POST|Interaction")
+    bool IsInteractionEnabled() const { return bInteractionEnabled; }
+
+    UFUNCTION(BlueprintCallable, Category="POST|Interaction")
+    void ClearFocus();
+
     UFUNCTION(BlueprintPure, Category="POST|Interaction")
     AActor* GetCurrentInteractActor() const { return CurrentInteractActor; }
 
@@ -53,5 +62,7 @@ private:
     UCameraComponent* Camera = nullptr;
 
     FText CurrentInteractText;
+    bool bInteractionEnabled = true;
+
     void SetFocusedActor(AActor* NewActor, const FText& NewText);
 };

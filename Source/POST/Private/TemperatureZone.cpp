@@ -47,7 +47,7 @@ void ATemperatureZone::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, 
 	UPOSTTemperatureComponent* TempComp = Player->GetTemperatureComponent();
 	if (!TempComp) return;
 
-	TempComp->SetInWarmZone(true);
+	TempComp->AddWarmZone();
 }
 
 void ATemperatureZone::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
@@ -60,7 +60,7 @@ void ATemperatureZone::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AA
 	UPOSTTemperatureComponent* TempComp = Player->GetTemperatureComponent();
 	if (!TempComp) return;
 
-	TempComp->SetInWarmZone(false);
+	TempComp->RemoveWarmZone();
 }
 
 void ATemperatureZone::CheckInitialOverlaps()
@@ -80,7 +80,7 @@ void ATemperatureZone::CheckInitialOverlaps()
 		UPOSTTemperatureComponent* TempComp = Character->GetTemperatureComponent();
 		if (!TempComp) continue;
 
-		TempComp->SetInWarmZone(true);
+		TempComp->AddWarmZone();
 
 		UE_LOG(LogPOST, Display, TEXT("[Temperature] Player already inside warm zone"));
 	}

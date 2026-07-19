@@ -1,7 +1,6 @@
 #include "Components/POSTRadioComponent.h"
 
 #include "Components/AudioComponent.h"
-#include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
 
 UPOSTRadioComponent::UPOSTRadioComponent()
@@ -23,6 +22,20 @@ void UPOSTRadioComponent::BeginPlay()
     }
 }
 
+void UPOSTRadioComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    StopRadio();
+
+    if (AudioComponent)
+    {
+        AudioComponent->OnAudioFinished.RemoveDynamic(this, &UPOSTRadioComponent::HandleAudioFinished);
+        AudioComponent->DestroyComponent();
+        AudioComponent = nullptr;
+    }
+
+    Super::EndPlay(EndPlayReason);
+}
+
 bool UPOSTRadioComponent::PlayMessage(FName MessageId, USoundBase* Sound)
 {
     if (!AudioComponent || !Sound)
@@ -30,7 +43,7 @@ bool UPOSTRadioComponent::PlayMessage(FName MessageId, USoundBase* Sound)
         return false;
     }
 
-    AudioComponent->Stop();
+    StopAudioSilently();
     AudioComponent->SetSound(Sound);
     AudioComponent->SetVolumeMultiplier(1.0f);
     CurrentMessageId = MessageId;
@@ -41,40 +54,25 @@ bool UPOSTRadioComponent::PlayMessage(FName MessageId, USoundBase* Sound)
 
 void UPOSTRadioComponent::SetInterference(float NormalizedStrength)
 {
-    if (!AudioComponent || bMessagePlaying || !InterferenceLoop)
-    {
-        return;
-    }
+    InterferenceStrength = FMath::Clamp(NormalizedStrength, 0.0f, 1.0f);
 
-    const float Strength = FMath::Clamp(NormalizedStrength, 0.0f, 1.0f);
-    if (Strength <= KINDA_SMALL_NUMBER)
+    if (!bMessagePlaying)
     {
-        AudioComponent->Stop();
-        return;
-    }
-
-    AudioComponent->Stop();
-    AudioComponent->SetSound(InterferenceLoop);
-    AudioComponent->SetVolumeMultiplier(Strength * MaximumInterferenceVolume);
-    if (!AudioComponent->IsPlaying())
-    {
-        AudioComponent->Play();
+        ApplyInterference();
     }
 }
 
 void UPOSTRadioComponent::StopRadio()
 {
-    if (AudioComponent)
-    {
-        AudioComponent->Stop();
-    }
+    StopAudioSilently();
     CurrentMessageId = NAME_None;
     bMessagePlaying = false;
+    InterferenceStrength = 0.0f;
 }
 
 void UPOSTRadioComponent::HandleAudioFinished()
 {
-    if (!bMessagePlaying)
+    if (bSuppressFinishedCallback || !bMessagePlaying)
     {
         return;
     }
@@ -83,4 +81,41 @@ void UPOSTRadioComponent::HandleAudioFinished()
     CurrentMessageId = NAME_None;
     bMessagePlaying = false;
     OnMessageFinished.Broadcast(FinishedMessage);
+    ApplyInterference();
+}
+
+void UPOSTRadioComponent::ApplyInterference()
+{
+    if (!AudioComponent || bMessagePlaying)
+    {
+        return;
+    }
+
+    if (!InterferenceLoop || InterferenceStrength <= KINDA_SMALL_NUMBER)
+    {
+        StopAudioSilently();
+        return;
+    }
+
+    const bool bNeedsRestart = AudioComponent->Sound != InterferenceLoop || !AudioComponent->IsPlaying();
+    if (bNeedsRestart)
+    {
+        StopAudioSilently();
+        AudioComponent->SetSound(InterferenceLoop);
+        AudioComponent->Play();
+    }
+
+    AudioComponent->SetVolumeMultiplier(InterferenceStrength * MaximumInterferenceVolume);
+}
+
+void UPOSTRadioComponent::StopAudioSilently()
+{
+    if (!AudioComponent || !AudioComponent->IsPlaying())
+    {
+        return;
+    }
+
+    bSuppressFinishedCallback = true;
+    AudioComponent->Stop();
+    bSuppressFinishedCallback = false;
 }

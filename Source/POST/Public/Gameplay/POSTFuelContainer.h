@@ -5,12 +5,20 @@
 #include "Interfaces/Interactable.h"
 #include "POSTFuelContainer.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPOSTFuelContainerChanged, float, NewFuel);
+
+class APOSTGameDirector;
+class USceneComponent;
+
 UCLASS(Blueprintable)
 class POST_API APOSTFuelContainer : public AActor, public IInteractable
 {
     GENERATED_BODY()
 public:
     APOSTFuelContainer();
+    virtual void BeginPlay() override;
+
+    UPROPERTY(BlueprintAssignable, Category="POST|Fuel") FPOSTFuelContainerChanged OnFuelChanged;
 
     UFUNCTION(BlueprintPure, Category="POST|Fuel") float GetFuel() const { return Fuel; }
     UFUNCTION(BlueprintPure, Category="POST|Fuel") float GetCapacity() const { return Capacity; }
