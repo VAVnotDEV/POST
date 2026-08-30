@@ -12,8 +12,6 @@ class POST_API UPOSTRunSaveGame : public USaveGame
 public:
     UPROPERTY(BlueprintReadWrite, SaveGame) EPOSTStoryStage StoryStage = EPOSTStoryStage::Arrival;
     UPROPERTY(BlueprintReadWrite, SaveGame) int32 RebootCount = 0;
-    UPROPERTY(BlueprintReadWrite, SaveGame) float WorldResourceMultiplier = 1.0f;
-    UPROPERTY(BlueprintReadWrite, SaveGame) float GeneratorReliabilityMultiplier = 1.0f;
     UPROPERTY(BlueprintReadWrite, SaveGame) EPOSTDeathCause LastDeathCause = EPOSTDeathCause::Unknown;
     UPROPERTY(BlueprintReadWrite, SaveGame) bool bHasSavedWorldTime = false;
     UPROPERTY(BlueprintReadWrite, SaveGame) int32 SavedDay = 1;

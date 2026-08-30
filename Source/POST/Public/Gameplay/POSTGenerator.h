@@ -8,7 +8,6 @@
 
 class APOSTFuelContainer;
 class APOSTGameState;
-class APOSTGameDirector;
 class USceneComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPOSTGeneratorStateChanged, EPOSTGeneratorState, NewState);
@@ -34,7 +33,6 @@ public:
     UFUNCTION(BlueprintCallable, Category="POST|Generator") void RepairGenerator(float RepairAmount = 0.35f);
     UFUNCTION(BlueprintCallable, Category="POST|Generator") float RefuelFrom(APOSTFuelContainer* Container, float RequestedAmount = 20.0f);
     UFUNCTION(BlueprintCallable, Category="POST|Generator") float AddFuel(float Amount);
-    UFUNCTION(BlueprintCallable, Category="POST|Generator") void ApplyReliabilityMultiplier(float Multiplier);
 
     UFUNCTION(BlueprintPure, Category="POST|Generator") bool HasPower() const { return State == EPOSTGeneratorState::Running && Fuel > 0.0f; }
     UFUNCTION(BlueprintPure, Category="POST|Generator") float GetFuel() const { return Fuel; }

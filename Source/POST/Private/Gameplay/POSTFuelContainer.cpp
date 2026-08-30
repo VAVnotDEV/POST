@@ -1,8 +1,7 @@
 #include "Gameplay/POSTFuelContainer.h"
 
 #include "Components/SceneComponent.h"
-#include "Gameplay/POSTGameDirector.h"
-#include "Kismet/GameplayStatics.h"
+
 
 APOSTFuelContainer::APOSTFuelContainer()
 {
@@ -19,15 +18,8 @@ void APOSTFuelContainer::BeginPlay()
     Capacity = FMath::Max(0.0f, Capacity);
     Fuel = FMath::Clamp(Fuel, 0.0f, Capacity);
 
-    if (const APOSTGameDirector* Director = Cast<APOSTGameDirector>(
-        UGameplayStatics::GetActorOfClass(this, APOSTGameDirector::StaticClass())))
-    {
-        ApplyResourceMultiplier(Director->GetWorldResourceMultiplier());
-    }
-    else
-    {
-        OnFuelChanged.Broadcast(Fuel);
-    }
+    OnFuelChanged.Broadcast(Fuel);
+    
 }
 
 float APOSTFuelContainer::AddFuel(float Amount)
@@ -56,11 +48,6 @@ float APOSTFuelContainer::RemoveFuel(float Amount)
     return Removed;
 }
 
-void APOSTFuelContainer::ApplyResourceMultiplier(float Multiplier)
-{
-    Fuel = FMath::Clamp(Fuel * FMath::Max(0.0f, Multiplier), 0.0f, Capacity);
-    OnFuelChanged.Broadcast(Fuel);
-}
 
 bool APOSTFuelContainer::CanInteract_Implementation(AActor* Interactor) const
 {

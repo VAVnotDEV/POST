@@ -1,9 +1,7 @@
 #include "Gameplay/POSTGenerator.h"
 #include "Gameplay/POSTFuelContainer.h"
-#include "Gameplay/POSTGameDirector.h"
 #include "POSTGameState.h"
 #include "Components/SceneComponent.h"
-#include "Kismet/GameplayStatics.h"
 
 APOSTGenerator::APOSTGenerator()
 {
@@ -23,9 +21,6 @@ void APOSTGenerator::BeginPlay()
     {
         CachedGameState->OnMinuteChanged.AddDynamic(this, &APOSTGenerator::HandleGameMinuteChanged);
     }
-
-    APOSTGameDirector* Director = Cast<APOSTGameDirector>(UGameplayStatics::GetActorOfClass(this, APOSTGameDirector::StaticClass()));
-    if (Director) ApplyReliabilityMultiplier(Director->GetGeneratorReliabilityMultiplier());
 
     OnFuelChanged.Broadcast(Fuel);
     OnConditionChanged.Broadcast(Condition);
@@ -51,7 +46,7 @@ void APOSTGenerator::SimulateGameMinute()
     if (State != EPOSTGeneratorState::Running) return;
 
     Fuel = FMath::Max(0.0f, Fuel - FuelConsumptionPerGameMinute);
-    Condition = FMath::Max(0.0f, Condition - WearPerGameMinute / FMath::Max(0.1f, ReliabilityMultiplier));
+    Condition = FMath::Max(0.0f, Condition - WearPerGameMinute);
     OnFuelChanged.Broadcast(Fuel);
     OnConditionChanged.Broadcast(Condition);
 
@@ -63,7 +58,7 @@ void APOSTGenerator::SimulateGameMinute()
     }
 
     const float ConditionFactor = 1.0f + (1.0f - Condition);
-    const float FailureChance = RandomFailureChancePerGameMinute * ConditionFactor / FMath::Max(0.1f, ReliabilityMultiplier);
+    const float FailureChance = RandomFailureChancePerGameMinute * ConditionFactor;
     if (Condition <= KINDA_SMALL_NUMBER || FMath::FRand() < FailureChance)
     {
         BreakGenerator();
@@ -141,10 +136,6 @@ float APOSTGenerator::AddFuel(float Amount)
     return Accepted;
 }
 
-void APOSTGenerator::ApplyReliabilityMultiplier(float Multiplier)
-{
-    ReliabilityMultiplier = FMath::Max(0.1f, Multiplier);
-}
 
 void APOSTGenerator::SetState(EPOSTGeneratorState NewState)
 {

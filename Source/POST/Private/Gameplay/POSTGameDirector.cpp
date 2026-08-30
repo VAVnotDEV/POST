@@ -22,7 +22,6 @@ void APOSTGameDirector::BeginPlay()
     LoadProgress();
     CacheWorldReferences();
     ApplySavedWorldState();
-    GetWorldTimerManager().SetTimer(DirectorTimer, this, &APOSTGameDirector::UpdateDirector, DirectorUpdateInterval, true);
 }
 
 void APOSTGameDirector::CacheWorldReferences()
@@ -33,27 +32,6 @@ void APOSTGameDirector::CacheWorldReferences()
     for (TActorIterator<APOSTAnomaly> It(GetWorld()); It; ++It)
     {
         Anomalies.Add(*It);
-    }
-}
-
-void APOSTGameDirector::UpdateDirector()
-{
-    if (!Player)
-    {
-        Player = Cast<APOSTCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
-    }
-    if (!Player) return;
-
-    const float NewThreat = 1.0f - FMath::Clamp(FVector::Distance(Player->GetActorLocation(), EntityLocation) / FMath::Max(ThreatRadius, 1.0f), 0.0f, 1.0f);
-    if (!FMath::IsNearlyEqual(NewThreat, ThreatLevel, 0.01f))
-    {
-        ThreatLevel = NewThreat;
-        OnThreatChanged.Broadcast(ThreatLevel);
-    }
-
-    if (UPOSTRadioComponent* Radio = Player->GetRadioComponent())
-    {
-        Radio->SetInterference(ThreatLevel);
     }
 }
 
@@ -96,8 +74,6 @@ void APOSTGameDirector::RegisterDeath(EPOSTDeathCause Cause)
     bRebootInProgress = true;
     ++RebootCount;
     LastDeathCause = Cause;
-    WorldResourceMultiplier = FMath::Max(MinimumResourceMultiplier, WorldResourceMultiplier - ResourceLossPerReboot);
-    GeneratorReliabilityMultiplier = FMath::Max(MinimumReliabilityMultiplier, GeneratorReliabilityMultiplier - ReliabilityLossPerReboot);
     SaveProgress();
 
     if (Player)
@@ -167,10 +143,6 @@ bool APOSTGameDirector::PlayRadioMessage(FName MessageId)
     return false;
 }
 
-void APOSTGameDirector::SetEntityLocation(FVector NewLocation)
-{
-    EntityLocation = NewLocation;
-}
 
 bool APOSTGameDirector::ActivateAnomalyByName(FName ActorName)
 {
@@ -236,7 +208,7 @@ void APOSTGameDirector::NotifyAnomalyStopped(APOSTAnomaly* Anomaly)
 
 bool APOSTGameDirector::TryActivateNearbyAnomaly()
 {
-    if (!Player || ThreatLevel < MinimumThreatForAnomaly || bRebootInProgress)
+    if (!Player || bRebootInProgress)
     {
         return false;
     }
@@ -287,8 +259,7 @@ bool APOSTGameDirector::SaveProgress()
     if (!Save) return false;
     Save->StoryStage = StoryStage;
     Save->RebootCount = RebootCount;
-    Save->WorldResourceMultiplier = WorldResourceMultiplier;
-    Save->GeneratorReliabilityMultiplier = GeneratorReliabilityMultiplier;
+
     Save->LastDeathCause = LastDeathCause;
     Save->PlayedRadioMessageIds = PlayedRadioMessages.Array();
 
@@ -311,8 +282,6 @@ bool APOSTGameDirector::LoadProgress()
     if (!Save) return false;
     StoryStage = Save->StoryStage;
     RebootCount = Save->RebootCount;
-    WorldResourceMultiplier = Save->WorldResourceMultiplier;
-    GeneratorReliabilityMultiplier = Save->GeneratorReliabilityMultiplier;
     LastDeathCause = Save->LastDeathCause;
     bHasSavedWorldTime = Save->bHasSavedWorldTime;
     SavedDay = FMath::Max(1, Save->SavedDay);
@@ -336,8 +305,6 @@ void APOSTGameDirector::ResetProgress()
     UGameplayStatics::DeleteGameInSlot(SaveSlotName, SaveUserIndex);
     StoryStage = EPOSTStoryStage::Arrival;
     RebootCount = 0;
-    WorldResourceMultiplier = 1.0f;
-    GeneratorReliabilityMultiplier = 1.0f;
     LastDeathCause = EPOSTDeathCause::Unknown;
     PlayedRadioMessages.Reset();
     bHasSavedWorldTime = false;

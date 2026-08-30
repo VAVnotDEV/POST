@@ -7,7 +7,6 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPOSTFuelContainerChanged, float, NewFuel);
 
-class APOSTGameDirector;
 class USceneComponent;
 
 UCLASS(Blueprintable)
@@ -24,7 +23,6 @@ public:
     UFUNCTION(BlueprintPure, Category="POST|Fuel") float GetCapacity() const { return Capacity; }
     UFUNCTION(BlueprintCallable, Category="POST|Fuel") float AddFuel(float Amount);
     UFUNCTION(BlueprintCallable, Category="POST|Fuel") float RemoveFuel(float Amount);
-    UFUNCTION(BlueprintCallable, Category="POST|Fuel") void ApplyResourceMultiplier(float Multiplier);
 
     virtual bool CanInteract_Implementation(AActor* Interactor) const override;
     virtual FText GetInteractText_Implementation(AActor* Interactor) const override;
