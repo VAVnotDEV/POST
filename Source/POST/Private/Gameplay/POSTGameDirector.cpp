@@ -49,6 +49,11 @@ void APOSTGameDirector::ApplySavedWorldState()
     }
 }
 
+void APOSTGameDirector::HandlePresenceCritical()
+{
+    SetPresenceState(EPOSTPresenceState::Critical);
+}
+
 bool APOSTGameDirector::SetStoryStage(EPOSTStoryStage NewStage)
 {
     if (StoryStage == NewStage) return false;
@@ -312,4 +317,42 @@ void APOSTGameDirector::ResetProgress()
     SavedHours = 21;
     SavedMinutes = 0;
     SavedSeconds = 0;
+}
+
+
+void APOSTGameDirector::StartPresenceEncounter()
+{
+    if (PresenceState != EPOSTPresenceState::Inactive)
+    {
+        return;
+    }
+
+    SetPresenceState(EPOSTPresenceState::Warning);
+
+    GetWorldTimerManager().SetTimer(
+        PresenceTimer,
+        this,
+        &APOSTGameDirector::HandlePresenceCritical,
+        TimeUntilCritical,
+        false
+    );
+}
+
+void APOSTGameDirector::StopPresenceEncounter()
+{
+    GetWorldTimerManager().ClearTimer(PresenceTimer);
+
+    SetPresenceState(EPOSTPresenceState::Inactive);
+}
+
+void APOSTGameDirector::SetPresenceState(EPOSTPresenceState NewState)
+{
+    if (PresenceState == NewState)
+    {
+        return;
+    }
+
+    PresenceState = NewState;
+
+    OnPresenceStateChanged.Broadcast(PresenceState);
 }

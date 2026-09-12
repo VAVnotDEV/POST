@@ -30,8 +30,10 @@ struct FPOSTRadioMessage
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPOSTStoryStageChanged, EPOSTStoryStage, OldStage, EPOSTStoryStage, NewStage);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPOSTRebooted, int32, RebootCount, EPOSTDeathCause, Cause);
-DECALRE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPOSTPresenceStateChanged, EPOSTPresenceState, NewState);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPOSTPresenceStateChanged, EPOSTPresenceState, NewState);
 
 UCLASS(Blueprintable)
 class POST_API APOSTGameDirector : public AActor
@@ -44,10 +46,6 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category="POST|Director") FPOSTStoryStageChanged OnStoryStageChanged;
     UPROPERTY(BlueprintAssignable, Category="POST|Director") FPOSTRebooted OnRebooted;
-
-    UPROPERTY(BlueprintAssignable, Category = "POST|Presence") FPOSTPresenceStateChanged OnPresenceCtateChanged;
-
-    UPROPERTY(BlueprintCallable, Category = "POST|Presence") EPOSTPresenceState PresenceState = EPOSTPresenceState::Inactive;
 
     UFUNCTION(BlueprintPure, Category="POST|Director") EPOSTStoryStage GetStoryStage() const { return StoryStage; }
     UFUNCTION(BlueprintPure, Category="POST|Director") int32 GetRebootCount() const { return RebootCount; }
@@ -62,6 +60,19 @@ public:
     UFUNCTION(BlueprintCallable, Category="POST|Director") bool SaveProgress();
     UFUNCTION(BlueprintCallable, Category="POST|Director") bool LoadProgress();
     UFUNCTION(BlueprintCallable, Category="POST|Director") void ResetProgress();
+
+
+    UPROPERTY(BlueprintAssignable, Category="POST|Presence") FPOSTPresenceStateChanged OnPresenceStateChanged;
+
+    UPROPERTY(VisibleAnywhere, Category="POST|Presence") EPOSTPresenceState PresenceState = EPOSTPresenceState::Inactive;
+
+    UFUNCTION(BlueprintCallable, Category="POST|Presence") void StartPresenceEncounter();
+
+    UFUNCTION(BlueprintCallable, Category = "POST|Presence") void StopPresenceEncounter();
+
+    void SetPresenceState(EPOSTPresenceState NewState);
+
+    UFUNCTION(BlueprintPure, Category = "POST|Presence") EPOSTPresenceState GetPresenceState() const { return PresenceState; }
 
     UFUNCTION(BlueprintCallable, Category="POST|Director|Radio") bool PlayRadioMessage(FName MessageId);
 
@@ -87,6 +98,10 @@ protected:
   
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|State") EPOSTDeathCause LastDeathCause = EPOSTDeathCause::Unknown;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "POST|Presence") float TimeUntilCritical = 12.0f;
+
+    FTimerHandle PresenceTimer;
+
     UFUNCTION(BlueprintImplementableEvent, Category="POST|Director") void OnColdAftereffectRequested();
     UFUNCTION(BlueprintImplementableEvent, Category="POST|Director") void OnWorldRebootRequested(EPOSTDeathCause Cause);
 
@@ -94,6 +109,8 @@ private:
     void CacheWorldReferences();
     void ExecuteWorldReboot();
     void ApplySavedWorldState();
+
+    void HandlePresenceCritical();
 
     UPROPERTY(Transient) APOSTCharacter* Player = nullptr;
     UPROPERTY(Transient) TArray<APOSTAnomaly*> Anomalies;

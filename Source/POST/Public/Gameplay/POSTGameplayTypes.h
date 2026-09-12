@@ -33,7 +33,7 @@ enum class EPOSTGeneratorState : uint8
     Broken
 };
 
-UENUM(BlueprintTypes)
+UENUM(BlueprintType)
 enum class EPOSTPresenceState : uint8
 {
     Inactive,
