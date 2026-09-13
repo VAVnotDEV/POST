@@ -21,7 +21,7 @@ APOSTPresenceTrigger::APOSTPresenceTrigger()
 	TriggerBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 }
 
-UFUNCTION()
+
 void APOSTPresenceTrigger::OnTriggeBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	UE_LOG(LogPOST, Warning, TEXT("TRIGGER FIRED: %s"), *GetNameSafe(OtherActor));
@@ -38,7 +38,7 @@ void APOSTPresenceTrigger::OnTriggeBeginOverlap(UPrimitiveComponent* OverlappedC
 	}
 }
 
-UFUNCTION()
+
 void APOSTPresenceTrigger::OnTriggerEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	if (!Director) return;
@@ -61,11 +61,3 @@ void APOSTPresenceTrigger::BeginPlay()
 	Super::BeginPlay();
 	
 }
-
-// Called every frame
-void APOSTPresenceTrigger::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-

@@ -53,6 +53,13 @@ void APOSTGameDirector::ApplySavedWorldState()
 void APOSTGameDirector::HandlePresenceCritical()
 {
     SetPresenceState(EPOSTPresenceState::Critical);
+
+    ResolvePresenceCritical();
+}
+
+void APOSTGameDirector::ResolvePresenceCritical()
+{
+    RegisterDeath(EPOSTDeathCause::Entity);
 }
 
 bool APOSTGameDirector::SetStoryStage(EPOSTStoryStage NewStage)

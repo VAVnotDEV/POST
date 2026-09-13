@@ -111,6 +111,7 @@ private:
     void ApplySavedWorldState();
 
     void HandlePresenceCritical();
+    void ResolvePresenceCritical();
 
     UPROPERTY(Transient) APOSTCharacter* Player = nullptr;
     UPROPERTY(Transient) TArray<APOSTAnomaly*> Anomalies;
