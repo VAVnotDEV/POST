@@ -10,6 +10,7 @@
 #include "EngineUtils.h"
 #include "TimerManager.h"
 #include "POSTGameState.h"
+#include "POSTLog.h"
 
 APOSTGameDirector::APOSTGameDirector()
 {
@@ -353,6 +354,7 @@ void APOSTGameDirector::SetPresenceState(EPOSTPresenceState NewState)
     }
 
     PresenceState = NewState;
+    UE_LOG(LogPOST, Warning, TEXT("Presence State: %d"), static_cast<int32>(PresenceState));
 
     OnPresenceStateChanged.Broadcast(PresenceState);
 }
