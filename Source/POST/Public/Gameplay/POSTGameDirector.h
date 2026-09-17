@@ -7,32 +7,22 @@
 
 class APOSTAnomaly;
 class APOSTCharacter;
+class APOSTCycleManager;
 class USoundBase;
-
 
 USTRUCT(BlueprintType)
 struct FPOSTRadioMessage
 {
     GENERATED_BODY()
 
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    FName MessageId = NAME_None;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    USoundBase* Sound = nullptr;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    EPOSTStoryStage MinimumStage = EPOSTStoryStage::Arrival;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    bool bPlayOnce = true;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly) FName MessageId = NAME_None;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly) USoundBase* Sound = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly) EPOSTStoryStage MinimumStage = EPOSTStoryStage::Arrival;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly) bool bPlayOnce = true;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPOSTStoryStageChanged, EPOSTStoryStage, OldStage, EPOSTStoryStage, NewStage);
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPOSTRebooted, int32, RebootCount, EPOSTDeathCause, Cause);
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPOSTPresenceStateChanged, EPOSTPresenceState, NewState);
 
 UCLASS(Blueprintable)
@@ -48,84 +38,46 @@ public:
     UPROPERTY(BlueprintAssignable, Category="POST|Director") FPOSTRebooted OnRebooted;
 
     UFUNCTION(BlueprintPure, Category="POST|Director") EPOSTStoryStage GetStoryStage() const { return StoryStage; }
-    UFUNCTION(BlueprintPure, Category="POST|Director") int32 GetRebootCount() const { return RebootCount; }
-
+    UFUNCTION(BlueprintPure, Category="POST|Director") int32 GetRebootCount() const;
     UFUNCTION(BlueprintPure, Category="POST|Director") EPOSTDeathCause GetLastDeathCause() const { return LastDeathCause; }
-  
-    UFUNCTION(BlueprintPure, Category="POST|Director") bool IsRebootInProgress() const { return bRebootInProgress; }
+    UFUNCTION(BlueprintPure, Category="POST|Director") bool IsRebootInProgress() const;
 
     UFUNCTION(BlueprintCallable, Category="POST|Director") bool SetStoryStage(EPOSTStoryStage NewStage);
     UFUNCTION(BlueprintCallable, Category="POST|Director") bool AdvanceStoryStage(EPOSTStoryStage ExpectedCurrentStage, EPOSTStoryStage NewStage);
+
+    // Compatibility entry point for existing systems (cold, accidents). Actual reboot belongs to CycleManager.
     UFUNCTION(BlueprintCallable, Category="POST|Director") void RegisterDeath(EPOSTDeathCause Cause);
-    UFUNCTION(BlueprintCallable, Category="POST|Director") bool SaveProgress();
-    UFUNCTION(BlueprintCallable, Category="POST|Director") bool LoadProgress();
-    UFUNCTION(BlueprintCallable, Category="POST|Director") void ResetProgress();
-
-
-    UPROPERTY(BlueprintAssignable, Category="POST|Presence") FPOSTPresenceStateChanged OnPresenceStateChanged;
-
-    UPROPERTY(VisibleAnywhere, Category="POST|Presence") EPOSTPresenceState PresenceState = EPOSTPresenceState::Inactive;
-
-    UFUNCTION(BlueprintCallable, Category="POST|Presence") void StartPresenceEncounter();
-
-    UFUNCTION(BlueprintCallable, Category = "POST|Presence") void StopPresenceEncounter();
-
-    void SetPresenceState(EPOSTPresenceState NewState);
-
-    UFUNCTION(BlueprintPure, Category = "POST|Presence") EPOSTPresenceState GetPresenceState() const { return PresenceState; }
 
     UFUNCTION(BlueprintCallable, Category="POST|Director|Radio") bool PlayRadioMessage(FName MessageId);
-
     UFUNCTION(BlueprintCallable, Category="POST|Director|Anomaly") bool ActivateAnomalyByName(FName ActorName);
     UFUNCTION(BlueprintCallable, Category="POST|Director|Anomaly") bool TryActivateNearbyAnomaly();
     UFUNCTION(BlueprintPure, Category="POST|Director|Anomaly") bool CanStartAnomaly(const APOSTAnomaly* Anomaly) const;
     void NotifyAnomalyStarted(APOSTAnomaly* Anomaly);
     void NotifyAnomalyStopped(APOSTAnomaly* Anomaly);
 
+    // Legacy Presence API is intentionally non-lethal. Remove old PresenceTrigger actors from maps after migration.
+    UPROPERTY(BlueprintAssignable, Category="POST|Presence|Legacy") FPOSTPresenceStateChanged OnPresenceStateChanged;
+    UPROPERTY(VisibleAnywhere, Category="POST|Presence|Legacy") EPOSTPresenceState PresenceState = EPOSTPresenceState::Inactive;
+    UFUNCTION(BlueprintCallable, Category="POST|Presence|Legacy") void StartPresenceEncounter();
+    UFUNCTION(BlueprintCallable, Category="POST|Presence|Legacy") void StopPresenceEncounter();
+    UFUNCTION(BlueprintPure, Category="POST|Presence|Legacy") EPOSTPresenceState GetPresenceState() const { return PresenceState; }
+
 protected:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Save") FString SaveSlotName = TEXT("POST_Autosave");
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Save") int32 SaveUserIndex = 0;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Reboot", meta=(ClampMin="0.0")) float RebootDelay = 1.5f;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Reboot") bool bReloadCurrentLevelOnDeath = true;
-
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Radio") TArray<FPOSTRadioMessage> RadioMessages;
-
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Anomaly", meta=(ClampMin="0.0")) float GlobalAnomalyCooldown = 5.0f;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Anomaly", meta=(ClampMin="1")) int32 MaxConcurrentAnomalies = 1;
-
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|State") EPOSTStoryStage StoryStage = EPOSTStoryStage::Arrival;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|State") int32 RebootCount = 0;
-  
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|State") EPOSTDeathCause LastDeathCause = EPOSTDeathCause::Unknown;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "POST|Presence") float TimeUntilCritical = 12.0f;
-
-    FTimerHandle PresenceTimer;
-
-    UFUNCTION(BlueprintImplementableEvent, Category="POST|Director") void OnColdAftereffectRequested();
-    UFUNCTION(BlueprintImplementableEvent, Category="POST|Director") void OnWorldRebootRequested(EPOSTDeathCause Cause);
 
 private:
     void CacheWorldReferences();
-    void ExecuteWorldReboot();
-    void ApplySavedWorldState();
-
-    void HandlePresenceCritical();
-    void ResolvePresenceCritical();
+    void SetPresenceState(EPOSTPresenceState NewState);
 
     UPROPERTY(Transient) APOSTCharacter* Player = nullptr;
+    UPROPERTY(Transient) APOSTCycleManager* CycleManager = nullptr;
     UPROPERTY(Transient) TArray<APOSTAnomaly*> Anomalies;
     UPROPERTY(Transient) TArray<APOSTAnomaly*> ActiveAnomalies;
     UPROPERTY(Transient) TSet<FName> PlayedRadioMessages;
 
-
-
-    FTimerHandle RebootTimer;
-    bool bRebootInProgress = false;
     float LastAnomalyFinishedWorldTime = -1.0f;
-    bool bHasSavedWorldTime = false;
-    int32 SavedDay = 1;
-    int32 SavedHours = 21;
-    int32 SavedMinutes = 0;
-    int32 SavedSeconds = 0;
 };
