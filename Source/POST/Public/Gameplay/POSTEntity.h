@@ -34,6 +34,12 @@ public:
     UFUNCTION(BlueprintPure, Category="POST|Entity")
     EPOSTEntityState GetEntityState() const { return EntityState; }
 
+    UFUNCTION(BlueprintPure, Category="POST|Entity|Debug")
+    bool HasLastKnownPlayerLocation() const { return bHasLastKnownLocation; }
+
+    UFUNCTION(BlueprintPure, Category="POST|Entity|Debug")
+    FVector GetLastKnownPlayerLocation() const { return LastKnownPlayerLocation; }
+
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Perception", meta=(ClampMin="0.0"))
     float PerceptionRadius = 2500.0f;
@@ -62,16 +68,29 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Decision", meta=(ClampMin="0.0"))
     float SearchAcceptanceRadius = 100.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Decision", meta=(ClampMin="0.0"))
+    float SearchDuration = 8.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Decision", meta=(ClampMin="0.0"))
+    float SearchRadius = 450.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Decision", meta=(ClampMin="0.1"))
+    float SearchMoveInterval = 1.5f;
+
     UFUNCTION(BlueprintImplementableEvent, Category="POST|Entity")
     void OnAttackPlayer(APOSTCharacter* VictimCharacter);
 
 private:
     void UpdatePerception(float DeltaTime);
-    void UpdateDecision();
+    void UpdateDecision(float DeltaTime);
     void SetEntityState(EPOSTEntityState NewState);
     void MoveToward(const FVector& Location);
     void StopEntityMovement();
     void TryAttack();
+    void RememberPlayerLocation(const FVector& Location);
+    void BeginSearch();
+    void UpdateSearch(float DeltaTime);
+    void ForgetPlayer();
     float GetTimeOfDayMultiplier() const;
     float GetDistanceMultiplier(float Distance) const;
 
@@ -86,5 +105,8 @@ private:
 
     FVector LastKnownPlayerLocation = FVector::ZeroVector;
     bool bHasLastKnownLocation = false;
+    bool bReceivedPlayerStimulusThisFrame = false;
     bool bAttackCommitted = false;
+    float SearchTimeRemaining = 0.0f;
+    float SearchMoveCooldown = 0.0f;
 };
