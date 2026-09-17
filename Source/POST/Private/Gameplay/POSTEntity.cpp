@@ -64,8 +64,6 @@ void APOSTEntity::UpdatePerception(float DeltaTime)
 
         Awareness = FMath::Clamp(Awareness + Gain, 0.0f, 100.0f);
 
-        // Movement makes the player detectable, but the Entity only gets a sampled
-        // position. It never follows the Player Actor directly like a GPS target.
         if (LocationSampleCooldown <= 0.0f)
         {
             RememberPlayerLocation(TargetPlayer->GetActorLocation());
@@ -135,7 +133,6 @@ void APOSTEntity::UpdateDecision(float DeltaTime)
 
     bAttackCommitted = false;
 
-    // No fresh coordinates. Finish travelling to the last known point and search it.
     if (bHasLastKnownLocation &&
         (EntityState == EPOSTEntityState::Hunting ||
          EntityState == EPOSTEntityState::Interested ||
@@ -204,15 +201,19 @@ void APOSTEntity::UpdateSearch(float DeltaTime)
 
     if (!bSearchAreaReached)
     {
-        if (DistanceToLastKnown > SearchAcceptanceRadius)
+        // MoveToLocation can finish before the pawn is inside our exact acceptance radius
+        // because path following also accounts for the pawn/goal radii. Use a slightly
+        // larger arrival threshold so search cannot get stuck at the last known point.
+        const float ArrivalRadius = FMath::Max(SearchAcceptanceRadius * 2.0f, 200.0f);
+        if (DistanceToLastKnown > ArrivalRadius)
         {
-            MoveToward(LastKnownPlayerLocation);
             return;
         }
 
         bSearchAreaReached = true;
         SearchTimeRemaining = SearchDuration;
         SearchMoveCooldown = 0.0f;
+        StopEntityMovement();
     }
 
     SearchTimeRemaining -= DeltaTime;
@@ -221,8 +222,10 @@ void APOSTEntity::UpdateSearch(float DeltaTime)
     if (SearchTimeRemaining <= 0.0f)
     {
         ForgetPlayer();
+        Awareness = 0.0f;
         SetEntityState(EPOSTEntityState::Roaming);
         RoamingMoveCooldown = 0.0f;
+        UpdateRoaming(DeltaTime);
         return;
     }
 
@@ -238,7 +241,7 @@ void APOSTEntity::UpdateSearch(float DeltaTime)
         FNavLocation SearchPoint;
         if (NavSystem->GetRandomReachablePointInRadius(LastKnownPlayerLocation, SearchRadius, SearchPoint))
         {
-            MoveToward(SearchPoint.Location);
+            MoveToward(SearchPoint.Location, 60.0f);
         }
     }
 }
