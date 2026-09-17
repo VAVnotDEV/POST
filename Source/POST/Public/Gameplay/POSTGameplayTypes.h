@@ -33,10 +33,22 @@ enum class EPOSTGeneratorState : uint8
     Broken
 };
 
+// Legacy Presence state is kept temporarily so existing Blueprints/assets do not break.
 UENUM(BlueprintType)
 enum class EPOSTPresenceState : uint8
 {
     Inactive,
     Warning,
     Critical
+};
+
+UENUM(BlueprintType)
+enum class EPOSTEntityState : uint8
+{
+    Dormant,
+    Roaming,
+    Interested,
+    Searching,
+    Hunting,
+    Attacking
 };
