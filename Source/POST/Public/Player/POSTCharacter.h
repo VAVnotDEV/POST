@@ -28,67 +28,32 @@ public:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
-    UFUNCTION(BlueprintPure, Category="POST|Movement")
-    bool IsRunning() const;
+    UFUNCTION(BlueprintPure, Category="POST|Movement") bool IsRunning() const;
+    UFUNCTION(BlueprintPure, Category="POST|Flashlight") bool IsFlashlightOn() const;
+    UFUNCTION(BlueprintPure, Category="POST|Components") UPOSTTemperatureComponent* GetTemperatureComponent() const { return TemperatureComponent; }
+    UFUNCTION(BlueprintPure, Category="POST|Components") UPOSTStaminaComponent* GetStaminaComponent() const { return StaminaComponent; }
+    UFUNCTION(BlueprintPure, Category="POST|Components") UPOSTRadioComponent* GetRadioComponent() const { return RadioComponent; }
+    UFUNCTION(BlueprintPure, Category="POST|Components") UPOSTInteractionComponent* GetInteractionComponent() const { return InteractionComponent; }
+    UFUNCTION(BlueprintPure, Category="POST|Carry") USceneComponent* GetCarryPoint() const { return CarryPoint; }
+    UFUNCTION(BlueprintPure, Category="POST|Carry") APOSTCarryableActor* GetCarriedActor() const { return CarriedActor; }
 
-    UFUNCTION(BlueprintPure, Category="POST|Components")
-    UPOSTTemperatureComponent* GetTemperatureComponent() const { return TemperatureComponent; }
-
-    UFUNCTION(BlueprintPure, Category="POST|Components")
-    UPOSTStaminaComponent* GetStaminaComponent() const { return StaminaComponent; }
-
-    UFUNCTION(BlueprintPure, Category="POST|Components")
-    UPOSTRadioComponent* GetRadioComponent() const { return RadioComponent; }
-
-    UFUNCTION(BlueprintPure, Category="POST|Components")
-    UPOSTInteractionComponent* GetInteractionComponent() const { return InteractionComponent; }
-
-    UFUNCTION(BlueprintPure, Category="POST|Carry")
-    USceneComponent* GetCarryPoint() const { return CarryPoint; }
-
-    UFUNCTION(BlueprintPure, Category="POST|Carry")
-    APOSTCarryableActor* GetCarriedActor() const { return CarriedActor; }
-
-    UFUNCTION(BlueprintCallable, Category="POST|Carry")
-    bool TryCarry(APOSTCarryableActor* Actor);
-
-    UFUNCTION(BlueprintCallable, Category="POST|Carry")
-    void DropCarriedActor();
-
+    UFUNCTION(BlueprintCallable, Category="POST|Carry") bool TryCarry(APOSTCarryableActor* Actor);
+    UFUNCTION(BlueprintCallable, Category="POST|Carry") void DropCarriedActor();
     void NotifyCarriedActorReleased(APOSTCarryableActor* Actor);
 
 protected:
     virtual void BeginPlay() override;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-    UCameraComponent* Camera = nullptr;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-    USceneComponent* FlashlightAttachPoint = nullptr;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-    USceneComponent* CarryPoint = nullptr;
-
-    UPROPERTY(EditDefaultsOnly, Category="FlashLight")
-    TSubclassOf<AFlashLightItem> FlashlightClass;
-
-    UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category="FlashLight")
-    AFlashLightItem* FlashlightActor = nullptr;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-    UPOSTInteractionComponent* InteractionComponent = nullptr;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-    UPOSTFootstepComponent* FootstepComponent = nullptr;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-    UPOSTRadioComponent* RadioComponent = nullptr;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-    UPOSTTemperatureComponent* TemperatureComponent = nullptr;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-    UPOSTStaminaComponent* StaminaComponent = nullptr;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components") UCameraComponent* Camera = nullptr;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components") USceneComponent* FlashlightAttachPoint = nullptr;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components") USceneComponent* CarryPoint = nullptr;
+    UPROPERTY(EditDefaultsOnly, Category="FlashLight") TSubclassOf<AFlashLightItem> FlashlightClass;
+    UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category="FlashLight") AFlashLightItem* FlashlightActor = nullptr;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components") UPOSTInteractionComponent* InteractionComponent = nullptr;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components") UPOSTFootstepComponent* FootstepComponent = nullptr;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components") UPOSTRadioComponent* RadioComponent = nullptr;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components") UPOSTTemperatureComponent* TemperatureComponent = nullptr;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components") UPOSTStaminaComponent* StaminaComponent = nullptr;
 
 private:
     void MoveForward(float Amount);
@@ -100,12 +65,10 @@ private:
     void TryInteract();
     void UpdateStaminaUsage();
 
-    UFUNCTION()
-    void HandleFrozen();
+    UFUNCTION() void HandleFrozen();
 
     bool bIsMovingForward = false;
     bool bWantsToRun = false;
 
-    UPROPERTY(Transient)
-    APOSTCarryableActor* CarriedActor = nullptr;
+    UPROPERTY(Transient) APOSTCarryableActor* CarriedActor = nullptr;
 };
