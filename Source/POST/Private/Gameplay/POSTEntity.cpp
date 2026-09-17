@@ -1,6 +1,7 @@
 #include "Gameplay/POSTEntity.h"
 
 #include "AIController.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Gameplay/POSTCycleManager.h"
 #include "Gameplay/POSTProtectionZone.h"
 #include "Kismet/GameplayStatics.h"
@@ -20,6 +21,8 @@ void APOSTEntity::BeginPlay()
     SpawnLocation = GetActorLocation();
     TargetPlayer = Cast<APOSTCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
     RoamingMoveCooldown = 0.0f;
+    LocationSampleCooldown = 0.0f;
+    ApplyMovementSpeedForState(EntityState);
 }
 
 void APOSTEntity::Tick(float DeltaTime)
@@ -35,6 +38,7 @@ void APOSTEntity::Tick(float DeltaTime)
         }
     }
 
+    LocationSampleCooldown = FMath::Max(0.0f, LocationSampleCooldown - DeltaTime);
     bReceivedPlayerStimulusThisFrame = false;
     UpdatePerception(DeltaTime);
     UpdateDecision(DeltaTime);
@@ -59,8 +63,15 @@ void APOSTEntity::UpdatePerception(float DeltaTime)
             GetDistanceMultiplier(Distance) * GetTimeOfDayMultiplier() * DeltaTime;
 
         Awareness = FMath::Clamp(Awareness + Gain, 0.0f, 100.0f);
-        RememberPlayerLocation(TargetPlayer->GetActorLocation());
-        bReceivedPlayerStimulusThisFrame = true;
+
+        // Movement makes the player detectable, but the Entity only gets a sampled
+        // position. It never follows the Player Actor directly like a GPS target.
+        if (LocationSampleCooldown <= 0.0f)
+        {
+            RememberPlayerLocation(TargetPlayer->GetActorLocation());
+            LocationSampleCooldown = LocationSampleInterval;
+            bReceivedPlayerStimulusThisFrame = true;
+        }
         return;
     }
 
@@ -99,7 +110,7 @@ void APOSTEntity::UpdateDecision(float DeltaTime)
 {
     const bool bPlayerProtected = APOSTProtectionZone::IsActorProtected(this, TargetPlayer);
 
-    if (!bPlayerProtected && bReceivedPlayerStimulusThisFrame)
+    if (!bPlayerProtected && bReceivedPlayerStimulusThisFrame && bHasLastKnownLocation)
     {
         bSearchAreaReached = false;
         SearchTimeRemaining = 0.0f;
@@ -124,6 +135,7 @@ void APOSTEntity::UpdateDecision(float DeltaTime)
 
     bAttackCommitted = false;
 
+    // No fresh coordinates. Finish travelling to the last known point and search it.
     if (bHasLastKnownLocation &&
         (EntityState == EPOSTEntityState::Hunting ||
          EntityState == EPOSTEntityState::Interested ||
@@ -286,7 +298,35 @@ void APOSTEntity::SetEntityState(EPOSTEntityState NewState)
 
     const EPOSTEntityState OldState = EntityState;
     EntityState = NewState;
+    ApplyMovementSpeedForState(EntityState);
     OnEntityStateChanged.Broadcast(OldState, EntityState);
+}
+
+void APOSTEntity::ApplyMovementSpeedForState(EPOSTEntityState State)
+{
+    UCharacterMovementComponent* Movement = GetCharacterMovement();
+    if (!Movement)
+    {
+        return;
+    }
+
+    switch (State)
+    {
+    case EPOSTEntityState::Roaming:
+        Movement->MaxWalkSpeed = RoamingSpeed;
+        break;
+    case EPOSTEntityState::Interested:
+        Movement->MaxWalkSpeed = InterestedSpeed;
+        break;
+    case EPOSTEntityState::Searching:
+        Movement->MaxWalkSpeed = SearchSpeed;
+        break;
+    case EPOSTEntityState::Hunting:
+        Movement->MaxWalkSpeed = HuntingSpeed;
+        break;
+    default:
+        break;
+    }
 }
 
 float APOSTEntity::GetTimeOfDayMultiplier() const
