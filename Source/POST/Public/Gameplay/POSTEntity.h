@@ -68,14 +68,23 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Decision", meta=(ClampMin="0.0"))
     float SearchAcceptanceRadius = 100.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Decision", meta=(ClampMin="0.0"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Search", meta=(ClampMin="0.0"))
     float SearchDuration = 8.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Decision", meta=(ClampMin="0.0"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Search", meta=(ClampMin="0.0"))
     float SearchRadius = 450.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Decision", meta=(ClampMin="0.1"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Search", meta=(ClampMin="0.1"))
     float SearchMoveInterval = 1.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Roaming", meta=(ClampMin="0.0"))
+    float RoamingRadius = 2200.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Roaming", meta=(ClampMin="0.1"))
+    float RoamingMoveInterval = 4.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Roaming", meta=(ClampMin="0.0"))
+    float RoamingAcceptanceRadius = 120.0f;
 
     UFUNCTION(BlueprintImplementableEvent, Category="POST|Entity")
     void OnAttackPlayer(APOSTCharacter* VictimCharacter);
@@ -84,12 +93,13 @@ private:
     void UpdatePerception(float DeltaTime);
     void UpdateDecision(float DeltaTime);
     void SetEntityState(EPOSTEntityState NewState);
-    void MoveToward(const FVector& Location);
+    void MoveToward(const FVector& Location, float AcceptanceRadius = -1.0f);
     void StopEntityMovement();
     void TryAttack();
     void RememberPlayerLocation(const FVector& Location);
     void BeginSearch();
     void UpdateSearch(float DeltaTime);
+    void UpdateRoaming(float DeltaTime);
     void ForgetPlayer();
     float GetTimeOfDayMultiplier() const;
     float GetDistanceMultiplier(float Distance) const;
@@ -103,10 +113,13 @@ private:
     UPROPERTY(VisibleAnywhere, Category="POST|Entity")
     EPOSTEntityState EntityState = EPOSTEntityState::Roaming;
 
+    FVector SpawnLocation = FVector::ZeroVector;
     FVector LastKnownPlayerLocation = FVector::ZeroVector;
     bool bHasLastKnownLocation = false;
     bool bReceivedPlayerStimulusThisFrame = false;
     bool bAttackCommitted = false;
+    bool bSearchAreaReached = false;
     float SearchTimeRemaining = 0.0f;
     float SearchMoveCooldown = 0.0f;
+    float RoamingMoveCooldown = 0.0f;
 };
