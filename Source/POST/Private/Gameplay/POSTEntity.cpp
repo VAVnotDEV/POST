@@ -17,7 +17,9 @@ APOSTEntity::APOSTEntity()
 void APOSTEntity::BeginPlay()
 {
     Super::BeginPlay();
+    SpawnLocation = GetActorLocation();
     TargetPlayer = Cast<APOSTCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+    RoamingMoveCooldown = 0.0f;
 }
 
 void APOSTEntity::Tick(float DeltaTime)
@@ -97,19 +99,35 @@ void APOSTEntity::UpdateDecision(float DeltaTime)
 {
     const bool bPlayerProtected = APOSTProtectionZone::IsActorProtected(this, TargetPlayer);
 
-    if (!bPlayerProtected && bReceivedPlayerStimulusThisFrame && Awareness >= HuntingThreshold)
+    if (!bPlayerProtected && bReceivedPlayerStimulusThisFrame)
     {
+        bSearchAreaReached = false;
         SearchTimeRemaining = 0.0f;
         SearchMoveCooldown = 0.0f;
-        SetEntityState(EPOSTEntityState::Hunting);
-        MoveToward(LastKnownPlayerLocation);
-        TryAttack();
-        return;
+
+        if (Awareness >= HuntingThreshold)
+        {
+            SetEntityState(EPOSTEntityState::Hunting);
+            MoveToward(LastKnownPlayerLocation);
+            TryAttack();
+            return;
+        }
+
+        if (Awareness >= InterestedThreshold)
+        {
+            bAttackCommitted = false;
+            SetEntityState(EPOSTEntityState::Interested);
+            MoveToward(LastKnownPlayerLocation);
+            return;
+        }
     }
 
     bAttackCommitted = false;
 
-    if (bHasLastKnownLocation)
+    if (bHasLastKnownLocation &&
+        (EntityState == EPOSTEntityState::Hunting ||
+         EntityState == EPOSTEntityState::Interested ||
+         EntityState == EPOSTEntityState::Searching))
     {
         if (EntityState != EPOSTEntityState::Searching)
         {
@@ -120,8 +138,13 @@ void APOSTEntity::UpdateDecision(float DeltaTime)
         return;
     }
 
+    if (Awareness < InterestedThreshold && EntityState != EPOSTEntityState::Searching)
+    {
+        ForgetPlayer();
+    }
+
     SetEntityState(EPOSTEntityState::Roaming);
-    StopEntityMovement();
+    UpdateRoaming(DeltaTime);
 }
 
 void APOSTEntity::TryAttack()
@@ -157,6 +180,7 @@ void APOSTEntity::RememberPlayerLocation(const FVector& Location)
 void APOSTEntity::BeginSearch()
 {
     SetEntityState(EPOSTEntityState::Searching);
+    bSearchAreaReached = false;
     SearchTimeRemaining = SearchDuration;
     SearchMoveCooldown = 0.0f;
     MoveToward(LastKnownPlayerLocation);
@@ -164,21 +188,29 @@ void APOSTEntity::BeginSearch()
 
 void APOSTEntity::UpdateSearch(float DeltaTime)
 {
+    const float DistanceToLastKnown = FVector::Dist2D(GetActorLocation(), LastKnownPlayerLocation);
+
+    if (!bSearchAreaReached)
+    {
+        if (DistanceToLastKnown > SearchAcceptanceRadius)
+        {
+            MoveToward(LastKnownPlayerLocation);
+            return;
+        }
+
+        bSearchAreaReached = true;
+        SearchTimeRemaining = SearchDuration;
+        SearchMoveCooldown = 0.0f;
+    }
+
     SearchTimeRemaining -= DeltaTime;
     SearchMoveCooldown -= DeltaTime;
 
-    if (SearchTimeRemaining <= 0.0f || Awareness <= KINDA_SMALL_NUMBER)
+    if (SearchTimeRemaining <= 0.0f)
     {
         ForgetPlayer();
         SetEntityState(EPOSTEntityState::Roaming);
-        StopEntityMovement();
-        return;
-    }
-
-    const float DistanceToLastKnown = FVector::Dist2D(GetActorLocation(), LastKnownPlayerLocation);
-    if (DistanceToLastKnown > SearchAcceptanceRadius)
-    {
-        MoveToward(LastKnownPlayerLocation);
+        RoamingMoveCooldown = 0.0f;
         return;
     }
 
@@ -199,19 +231,41 @@ void APOSTEntity::UpdateSearch(float DeltaTime)
     }
 }
 
+void APOSTEntity::UpdateRoaming(float DeltaTime)
+{
+    RoamingMoveCooldown -= DeltaTime;
+    if (RoamingMoveCooldown > 0.0f)
+    {
+        return;
+    }
+
+    RoamingMoveCooldown = RoamingMoveInterval;
+
+    if (UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
+    {
+        FNavLocation RoamingPoint;
+        if (NavSystem->GetRandomReachablePointInRadius(SpawnLocation, RoamingRadius, RoamingPoint))
+        {
+            MoveToward(RoamingPoint.Location, RoamingAcceptanceRadius);
+        }
+    }
+}
+
 void APOSTEntity::ForgetPlayer()
 {
     bHasLastKnownLocation = false;
     LastKnownPlayerLocation = FVector::ZeroVector;
+    bSearchAreaReached = false;
     SearchTimeRemaining = 0.0f;
     SearchMoveCooldown = 0.0f;
 }
 
-void APOSTEntity::MoveToward(const FVector& Location)
+void APOSTEntity::MoveToward(const FVector& Location, float AcceptanceRadius)
 {
     if (AAIController* AI = Cast<AAIController>(GetController()))
     {
-        AI->MoveToLocation(Location, SearchAcceptanceRadius, true, true, false, true);
+        const float Radius = AcceptanceRadius >= 0.0f ? AcceptanceRadius : SearchAcceptanceRadius;
+        AI->MoveToLocation(Location, Radius, true, true, false, true);
     }
 }
 
