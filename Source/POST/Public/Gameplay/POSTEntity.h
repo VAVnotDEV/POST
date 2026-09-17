@@ -56,6 +56,11 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Perception", meta=(ClampMin="0.0"))
     float NightAwarenessMultiplier = 1.5f;
 
+    // The Entity does not receive GPS-like player coordinates every frame.
+    // While the player is moving, it samples a fresh location only at this interval.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Perception", meta=(ClampMin="0.1"))
+    float LocationSampleInterval = 1.25f;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Decision", meta=(ClampMin="0.0", ClampMax="100.0"))
     float InterestedThreshold = 20.0f;
 
@@ -67,6 +72,18 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Decision", meta=(ClampMin="0.0"))
     float SearchAcceptanceRadius = 100.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Movement", meta=(ClampMin="0.0"))
+    float RoamingSpeed = 160.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Movement", meta=(ClampMin="0.0"))
+    float InterestedSpeed = 190.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Movement", meta=(ClampMin="0.0"))
+    float SearchSpeed = 180.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Movement", meta=(ClampMin="0.0"))
+    float HuntingSpeed = 260.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Entity|Search", meta=(ClampMin="0.0"))
     float SearchDuration = 8.0f;
@@ -93,6 +110,7 @@ private:
     void UpdatePerception(float DeltaTime);
     void UpdateDecision(float DeltaTime);
     void SetEntityState(EPOSTEntityState NewState);
+    void ApplyMovementSpeedForState(EPOSTEntityState State);
     void MoveToward(const FVector& Location, float AcceptanceRadius = -1.0f);
     void StopEntityMovement();
     void TryAttack();
@@ -119,6 +137,7 @@ private:
     bool bReceivedPlayerStimulusThisFrame = false;
     bool bAttackCommitted = false;
     bool bSearchAreaReached = false;
+    float LocationSampleCooldown = 0.0f;
     float SearchTimeRemaining = 0.0f;
     float SearchMoveCooldown = 0.0f;
     float RoamingMoveCooldown = 0.0f;
