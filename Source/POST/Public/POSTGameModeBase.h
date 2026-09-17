@@ -6,15 +6,12 @@
 #include "GameFramework/GameModeBase.h"
 #include "POSTGameModeBase.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class POST_API APOSTGameModeBase : public AGameModeBase
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	APOSTGameModeBase();
-	
+    APOSTGameModeBase();
+    virtual void BeginPlay() override;
 };
