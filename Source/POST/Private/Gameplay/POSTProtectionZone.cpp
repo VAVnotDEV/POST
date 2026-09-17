@@ -2,6 +2,8 @@
 
 #include "Components/BoxComponent.h"
 #include "EngineUtils.h"
+#include "NavModifierComponent.h"
+#include "NavAreas/NavArea_Null.h"
 
 APOSTProtectionZone::APOSTProtectionZone()
 {
@@ -13,6 +15,9 @@ APOSTProtectionZone::APOSTProtectionZone()
     ProtectionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
     ProtectionBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
     ProtectionBox->SetGenerateOverlapEvents(true);
+
+    NavigationBlocker = CreateDefaultSubobject<UNavModifierComponent>(TEXT("NavigationBlocker"));
+    NavigationBlocker->SetAreaClass(UNavArea_Null::StaticClass());
 }
 
 bool APOSTProtectionZone::IsActorInside(const AActor* Actor) const
