@@ -39,6 +39,6 @@ void APOSTSleepPoint::Interact_Implementation(AActor* Interactor)
         GameState->SetGameTime(NextDay, WakeHour, 0, 0);
     }
 
-    if (Director) Director->SaveProgress();
+    
     OnSleepRequested(Interactor);
 }
