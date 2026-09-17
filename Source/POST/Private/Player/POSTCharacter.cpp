@@ -20,7 +20,6 @@ APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
     : Super(ObjInit.SetDefaultSubobjectClass<UPOSTMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
     PrimaryActorTick.bCanEverTick = true;
-
     GetCapsuleComponent()->InitCapsuleSize(42.0f, 88.0f);
 
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -40,13 +39,11 @@ APOSTCharacter::APOSTCharacter(const FObjectInitializer& ObjInit)
     RadioComponent = CreateDefaultSubobject<UPOSTRadioComponent>(TEXT("RadioComponent"));
     InteractionComponent = CreateDefaultSubobject<UPOSTInteractionComponent>(TEXT("InteractionComponent"));
     FootstepComponent = CreateDefaultSubobject<UPOSTFootstepComponent>(TEXT("FootstepComponent"));
-
 }
 
 void APOSTCharacter::BeginPlay()
 {
     Super::BeginPlay();
-
     SpawnFlashlight();
     TemperatureComponent->OnPlayerFrozen.AddDynamic(this, &APOSTCharacter::HandleFrozen);
 }
@@ -92,26 +89,16 @@ void APOSTCharacter::MoveRight(float Amount)
 
 void APOSTCharacter::SpawnFlashlight()
 {
-    if (!FlashlightClass || !GetWorld())
-    {
-        return;
-    }
+    if (!FlashlightClass || !GetWorld()) return;
 
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = this;
     SpawnParams.Instigator = this;
 
-    FlashlightActor = GetWorld()->SpawnActor<AFlashLightItem>(
-        FlashlightClass,
-        FVector::ZeroVector,
-        FRotator::ZeroRotator,
-        SpawnParams);
-
+    FlashlightActor = GetWorld()->SpawnActor<AFlashLightItem>(FlashlightClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
     if (FlashlightActor)
     {
-        FlashlightActor->AttachToComponent(
-            FlashlightAttachPoint,
-            FAttachmentTransformRules::SnapToTargetIncludingScale);
+        FlashlightActor->AttachToComponent(FlashlightAttachPoint, FAttachmentTransformRules::SnapToTargetIncludingScale);
     }
 }
 
@@ -121,6 +108,11 @@ void APOSTCharacter::ToggleFlashlight()
     {
         FlashlightActor->ToggleFlashLight();
     }
+}
+
+bool APOSTCharacter::IsFlashlightOn() const
+{
+    return IsValid(FlashlightActor) && FlashlightActor->IsOn();
 }
 
 bool APOSTCharacter::IsRunning() const
@@ -142,19 +134,9 @@ void APOSTCharacter::OnStopRunning()
 
 void APOSTCharacter::UpdateStaminaUsage()
 {
-    if (!StaminaComponent)
-    {
-        return;
-    }
-
-    if (IsRunning())
-    {
-        StaminaComponent->StartSpendStamina();
-    }
-    else
-    {
-        StaminaComponent->StopSpendStamina();
-    }
+    if (!StaminaComponent) return;
+    if (IsRunning()) StaminaComponent->StartSpendStamina();
+    else StaminaComponent->StopSpendStamina();
 }
 
 void APOSTCharacter::TryInteract()
@@ -167,16 +149,8 @@ void APOSTCharacter::TryInteract()
 
 bool APOSTCharacter::TryCarry(APOSTCarryableActor* Actor)
 {
-    if (!IsValid(Actor) || IsValid(CarriedActor) || Actor->IsCarried())
-    {
-        return false;
-    }
-
-    if (!Actor->AttachToCharacter(this))
-    {
-        return false;
-    }
-
+    if (!IsValid(Actor) || IsValid(CarriedActor) || Actor->IsCarried()) return false;
+    if (!Actor->AttachToCharacter(this)) return false;
     CarriedActor = Actor;
     return true;
 }
@@ -202,12 +176,9 @@ void APOSTCharacter::NotifyCarriedActorReleased(APOSTCarryableActor* Actor)
     }
 }
 
-
 void APOSTCharacter::HandleFrozen()
 {
-    APOSTGameDirector* Director = Cast<APOSTGameDirector>(
-        UGameplayStatics::GetActorOfClass(this, APOSTGameDirector::StaticClass()));
-
+    APOSTGameDirector* Director = Cast<APOSTGameDirector>(UGameplayStatics::GetActorOfClass(this, APOSTGameDirector::StaticClass()));
     if (!Director)
     {
         UE_LOG(LogTemp, Error, TEXT("Player froze, but POSTGameDirector was not found in the level."));
