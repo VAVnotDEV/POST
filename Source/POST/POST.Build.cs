@@ -14,7 +14,8 @@ public class POST : ModuleRules
             "CoreUObject",
             "Engine",
             "InputCore",
-            "AIModule"
+            "AIModule",
+            "NavigationSystem"
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] { });
