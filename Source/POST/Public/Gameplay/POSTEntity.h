@@ -63,7 +63,7 @@ protected:
     float SearchAcceptanceRadius = 100.0f;
 
     UFUNCTION(BlueprintImplementableEvent, Category="POST|Entity")
-    void OnAttackPlayer(APOSTCharacter* Player);
+    void OnAttackPlayer(APOSTCharacter* TargetPlayer);
 
 private:
     void UpdatePerception(float DeltaTime);
@@ -76,7 +76,7 @@ private:
     float GetDistanceMultiplier(float Distance) const;
 
     UPROPERTY(Transient)
-    APOSTCharacter* Player = nullptr;
+    APOSTCharacter* TargetPlayer = nullptr;
 
     UPROPERTY(VisibleAnywhere, Category="POST|Entity")
     float Awareness = 0.0f;
