@@ -3,6 +3,7 @@
 #include "Components/POSTRadioComponent.h"
 #include "Gameplay/POSTAnomaly.h"
 #include "Gameplay/POSTCycleManager.h"
+#include "Gameplay/POSTEntity.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/POSTCharacter.h"
 #include "EngineUtils.h"
@@ -10,19 +11,27 @@
 
 APOSTGameDirector::APOSTGameDirector()
 {
-    PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = true;
 }
 
 void APOSTGameDirector::BeginPlay()
 {
     Super::BeginPlay();
     CacheWorldReferences();
+    ScheduleNextManifestation();
+}
+
+void APOSTGameDirector::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+    UpdateEntityPresence(DeltaTime);
 }
 
 void APOSTGameDirector::CacheWorldReferences()
 {
     Player = Cast<APOSTCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
     CycleManager = Cast<APOSTCycleManager>(UGameplayStatics::GetActorOfClass(this, APOSTCycleManager::StaticClass()));
+    Entity = Cast<APOSTEntity>(UGameplayStatics::GetActorOfClass(this, APOSTEntity::StaticClass()));
 
     Anomalies.Reset();
     ActiveAnomalies.Reset();
@@ -30,6 +39,54 @@ void APOSTGameDirector::CacheWorldReferences()
     {
         Anomalies.Add(*It);
     }
+}
+
+void APOSTGameDirector::UpdateEntityPresence(float DeltaTime)
+{
+    if (!IsValid(Entity))
+    {
+        Entity = Cast<APOSTEntity>(UGameplayStatics::GetActorOfClass(this, APOSTEntity::StaticClass()));
+    }
+
+    if (!IsValid(Entity) || !IsValid(Player) || ManifestationRadius <= FullManifestationDistance)
+    {
+        EntityPresence = 0.0f;
+        return;
+    }
+
+    const float DistanceToPlayer = FVector::Dist(Entity->GetActorLocation(), Player->GetActorLocation());
+    EntityPresence = 1.0f - FMath::GetRangePct(FullManifestationDistance, ManifestationRadius, DistanceToPlayer);
+    EntityPresence = FMath::Clamp(EntityPresence, 0.0f, 1.0f);
+
+    if (EntityPresence <= KINDA_SMALL_NUMBER || IsRebootInProgress())
+    {
+        // Presence has left the outer radius. A future return gets a fresh random delay.
+        ManifestationCountdown = -1.0f;
+        return;
+    }
+
+    if (ManifestationCountdown < 0.0f)
+    {
+        ScheduleNextManifestation();
+    }
+
+    ManifestationCountdown -= DeltaTime;
+    if (ManifestationCountdown > 0.0f)
+    {
+        return;
+    }
+
+    // Failure is intentional: silence is part of the system. We simply schedule another opportunity.
+    TryActivateNearbyAnomaly();
+    ScheduleNextManifestation();
+}
+
+void APOSTGameDirector::ScheduleNextManifestation()
+{
+    const float Presence = FMath::Clamp(EntityPresence, 0.0f, 1.0f);
+    const float MinInterval = FMath::Lerp(FarManifestationMinInterval, NearManifestationMinInterval, Presence);
+    const float MaxInterval = FMath::Lerp(FarManifestationMaxInterval, NearManifestationMaxInterval, Presence);
+    ManifestationCountdown = FMath::FRandRange(FMath::Min(MinInterval, MaxInterval), FMath::Max(MinInterval, MaxInterval));
 }
 
 int32 APOSTGameDirector::GetRebootCount() const
@@ -162,7 +219,7 @@ void APOSTGameDirector::NotifyAnomalyStopped(APOSTAnomaly* Anomaly)
 
 bool APOSTGameDirector::TryActivateNearbyAnomaly()
 {
-    if (!Player || IsRebootInProgress())
+    if (!IsValid(Entity) || IsRebootInProgress())
     {
         return false;
     }
@@ -172,10 +229,19 @@ bool APOSTGameDirector::TryActivateNearbyAnomaly()
         return !IsValid(Anomaly) || !Anomaly->IsActive();
     });
 
+    const float RadiusSq = FMath::Square(ManifestationRadius);
     TArray<APOSTAnomaly*> Candidates;
+
     for (APOSTAnomaly* Anomaly : Anomalies)
     {
-        if (IsValid(Anomaly) && Anomaly->CanActivate())
+        if (!IsValid(Anomaly) || !Anomaly->CanActivate())
+        {
+            continue;
+        }
+
+        // The anomaly belongs to the Entity's presence, not to a player trigger.
+        // Only authored anomaly points physically reached by the outer presence are eligible.
+        if (FVector::DistSquared(Anomaly->GetActorLocation(), Entity->GetActorLocation()) <= RadiusSq)
         {
             Candidates.Add(Anomaly);
         }
@@ -186,19 +252,15 @@ bool APOSTGameDirector::TryActivateNearbyAnomaly()
         return false;
     }
 
-    Candidates.Sort([this](const APOSTAnomaly& A, const APOSTAnomaly& B)
+    // No "nearest anomaly" rule: that would create learnable scripts.
+    // Every currently valid point inside the Entity's presence can be selected.
+    while (Candidates.Num() > 0)
     {
-        return FVector::DistSquared(A.GetActorLocation(), Player->GetActorLocation()) <
-               FVector::DistSquared(B.GetActorLocation(), Player->GetActorLocation());
-    });
+        const int32 Index = FMath::RandRange(0, Candidates.Num() - 1);
+        APOSTAnomaly* Candidate = Candidates[Index];
+        Candidates.RemoveAtSwap(Index);
 
-    const int32 PoolSize = FMath::Min(3, Candidates.Num());
-    const int32 StartIndex = FMath::RandRange(0, PoolSize - 1);
-
-    for (int32 Offset = 0; Offset < PoolSize; ++Offset)
-    {
-        const int32 CandidateIndex = (StartIndex + Offset) % PoolSize;
-        if (Candidates[CandidateIndex]->ActivateAnomaly())
+        if (Candidate->ActivateAnomaly())
         {
             return true;
         }
