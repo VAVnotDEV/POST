@@ -63,7 +63,7 @@ protected:
     float SearchAcceptanceRadius = 100.0f;
 
     UFUNCTION(BlueprintImplementableEvent, Category="POST|Entity")
-    void OnAttackPlayer(APOSTCharacter* TargetPlayer);
+    void OnAttackPlayer(APOSTCharacter* VictimCharacter);
 
 private:
     void UpdatePerception(float DeltaTime);
