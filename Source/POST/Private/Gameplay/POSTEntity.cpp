@@ -16,17 +16,17 @@ APOSTEntity::APOSTEntity()
 void APOSTEntity::BeginPlay()
 {
     Super::BeginPlay();
-    Player = Cast<APOSTCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+    TargetPlayer = Cast<APOSTCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
 }
 
 void APOSTEntity::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    if (!IsValid(Player))
+    if (!IsValid(TargetPlayer))
     {
-        Player = Cast<APOSTCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
-        if (!Player)
+        TargetPlayer = Cast<APOSTCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+        if (!TargetPlayer)
         {
             return;
         }
@@ -38,25 +38,25 @@ void APOSTEntity::Tick(float DeltaTime)
 
 void APOSTEntity::UpdatePerception(float DeltaTime)
 {
-    if (APOSTProtectionZone::IsActorProtected(this, Player))
+    if (APOSTProtectionZone::IsActorProtected(this, TargetPlayer))
     {
         Awareness = FMath::Max(0.0f, Awareness - AwarenessDecayPerSecond * DeltaTime);
         return;
     }
 
-    const float Distance = FVector::Dist(GetActorLocation(), Player->GetActorLocation());
-    const float Speed = Player->GetVelocity().Size2D();
+    const float Distance = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
+    const float Speed = TargetPlayer->GetVelocity().Size2D();
     bool bReceivedStimulus = false;
 
     if (Distance <= PerceptionRadius && Speed > 5.0f)
     {
         const float SpeedAlpha = FMath::Clamp(Speed / 600.0f, 0.15f, 1.0f);
-        const float RunModifier = Player->IsRunning() ? RunningMultiplier : 1.0f;
+        const float RunModifier = TargetPlayer->IsRunning() ? RunningMultiplier : 1.0f;
         const float Gain = MovementAwarenessPerSecond * SpeedAlpha * RunModifier *
             GetDistanceMultiplier(Distance) * GetTimeOfDayMultiplier() * DeltaTime;
 
         Awareness = FMath::Clamp(Awareness + Gain, 0.0f, 100.0f);
-        LastKnownPlayerLocation = Player->GetActorLocation();
+        LastKnownPlayerLocation = TargetPlayer->GetActorLocation();
         bHasLastKnownLocation = true;
         bReceivedStimulus = true;
     }
@@ -97,7 +97,7 @@ void APOSTEntity::ReportLight(const FVector& WorldLocation, float Strength)
 
 void APOSTEntity::UpdateDecision()
 {
-    const bool bPlayerProtected = APOSTProtectionZone::IsActorProtected(this, Player);
+    const bool bPlayerProtected = APOSTProtectionZone::IsActorProtected(this, TargetPlayer);
 
     if (bPlayerProtected)
     {
@@ -118,7 +118,7 @@ void APOSTEntity::UpdateDecision()
     if (Awareness >= HuntingThreshold)
     {
         SetEntityState(EPOSTEntityState::Hunting);
-        LastKnownPlayerLocation = Player->GetActorLocation();
+        LastKnownPlayerLocation = TargetPlayer->GetActorLocation();
         bHasLastKnownLocation = true;
         MoveToward(LastKnownPlayerLocation);
         TryAttack();
@@ -139,12 +139,12 @@ void APOSTEntity::UpdateDecision()
 
 void APOSTEntity::TryAttack()
 {
-    if (bAttackCommitted || !Player || APOSTProtectionZone::IsActorProtected(this, Player))
+    if (bAttackCommitted || !TargetPlayer || APOSTProtectionZone::IsActorProtected(this, TargetPlayer))
     {
         return;
     }
 
-    if (FVector::DistSquared(GetActorLocation(), Player->GetActorLocation()) > FMath::Square(AttackDistance))
+    if (FVector::DistSquared(GetActorLocation(), TargetPlayer->GetActorLocation()) > FMath::Square(AttackDistance))
     {
         return;
     }
@@ -152,7 +152,7 @@ void APOSTEntity::TryAttack()
     bAttackCommitted = true;
     SetEntityState(EPOSTEntityState::Attacking);
     StopEntityMovement();
-    OnAttackPlayer(Player);
+    OnAttackPlayer(TargetPlayer);
 
     if (APOSTCycleManager* CycleManager = Cast<APOSTCycleManager>(UGameplayStatics::GetActorOfClass(this, APOSTCycleManager::StaticClass())))
     {
