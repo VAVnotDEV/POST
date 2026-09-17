@@ -1,15 +1,11 @@
 #include "Gameplay/POSTGameDirector.h"
 
 #include "Components/POSTRadioComponent.h"
-#include "Components/POSTInteractionComponent.h"
 #include "Gameplay/POSTAnomaly.h"
-#include "Gameplay/POSTRunSaveGame.h"
+#include "Gameplay/POSTCycleManager.h"
 #include "Kismet/GameplayStatics.h"
-#include "GameFramework/PlayerController.h"
 #include "Player/POSTCharacter.h"
 #include "EngineUtils.h"
-#include "TimerManager.h"
-#include "POSTGameState.h"
 #include "POSTLog.h"
 
 APOSTGameDirector::APOSTGameDirector()
@@ -20,14 +16,14 @@ APOSTGameDirector::APOSTGameDirector()
 void APOSTGameDirector::BeginPlay()
 {
     Super::BeginPlay();
-    LoadProgress();
     CacheWorldReferences();
-    ApplySavedWorldState();
 }
 
 void APOSTGameDirector::CacheWorldReferences()
 {
     Player = Cast<APOSTCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+    CycleManager = Cast<APOSTCycleManager>(UGameplayStatics::GetActorOfClass(this, APOSTCycleManager::StaticClass()));
+
     Anomalies.Reset();
     ActiveAnomalies.Reset();
     for (TActorIterator<APOSTAnomaly> It(GetWorld()); It; ++It)
@@ -36,39 +32,26 @@ void APOSTGameDirector::CacheWorldReferences()
     }
 }
 
-
-void APOSTGameDirector::ApplySavedWorldState()
+int32 APOSTGameDirector::GetRebootCount() const
 {
-    if (!bHasSavedWorldTime)
-    {
-        return;
-    }
-
-    if (APOSTGameState* GameState = GetWorld() ? GetWorld()->GetGameState<APOSTGameState>() : nullptr)
-    {
-        GameState->SetGameTime(SavedDay, SavedHours, SavedMinutes, SavedSeconds);
-    }
+    return CycleManager ? CycleManager->GetTotalCycles() : 0;
 }
 
-void APOSTGameDirector::HandlePresenceCritical()
+bool APOSTGameDirector::IsRebootInProgress() const
 {
-    SetPresenceState(EPOSTPresenceState::Critical);
-
-    ResolvePresenceCritical();
-}
-
-void APOSTGameDirector::ResolvePresenceCritical()
-{
-    RegisterDeath(EPOSTDeathCause::Entity);
+    return CycleManager && CycleManager->IsRebootInProgress();
 }
 
 bool APOSTGameDirector::SetStoryStage(EPOSTStoryStage NewStage)
 {
-    if (StoryStage == NewStage) return false;
+    if (StoryStage == NewStage)
+    {
+        return false;
+    }
+
     const EPOSTStoryStage OldStage = StoryStage;
     StoryStage = NewStage;
     OnStoryStageChanged.Broadcast(OldStage, StoryStage);
-    SaveProgress();
     return true;
 }
 
@@ -79,70 +62,33 @@ bool APOSTGameDirector::AdvanceStoryStage(EPOSTStoryStage ExpectedCurrentStage, 
 
 void APOSTGameDirector::RegisterDeath(EPOSTDeathCause Cause)
 {
-    if (bRebootInProgress)
-    {
-        return;
-    }
-
-    bRebootInProgress = true;
-    ++RebootCount;
     LastDeathCause = Cause;
-    SaveProgress();
 
-    if (Player)
+    if (!CycleManager)
     {
-        Player->DropCarriedActor();
-        if (UPOSTInteractionComponent* Interaction = Player->FindComponentByClass<UPOSTInteractionComponent>())
-        {
-            Interaction->SetInteractionEnabled(false);
-        }
+        CycleManager = Cast<APOSTCycleManager>(UGameplayStatics::GetActorOfClass(this, APOSTCycleManager::StaticClass()));
     }
 
-    if (bReloadCurrentLevelOnDeath)
+    if (!CycleManager)
     {
-        if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
-        {
-            PC->SetIgnoreMoveInput(true);
-            PC->SetIgnoreLookInput(true);
-        }
-    }
-
-    OnRebooted.Broadcast(RebootCount, Cause);
-    if (Cause == EPOSTDeathCause::Cold)
-    {
-        OnColdAftereffectRequested();
-    }
-    OnWorldRebootRequested(Cause);
-
-    if (bReloadCurrentLevelOnDeath)
-    {
-        GetWorldTimerManager().SetTimer(RebootTimer, this, &APOSTGameDirector::ExecuteWorldReboot, RebootDelay, false);
-    }
-}
-
-void APOSTGameDirector::ExecuteWorldReboot()
-{
-    UWorld* World = GetWorld();
-    if (!World)
-    {
-        bRebootInProgress = false;
+        UE_LOG(LogPOST, Error, TEXT("RegisterDeath: POSTCycleManager is missing from the level."));
         return;
     }
 
-    const FName CurrentLevelName(*UGameplayStatics::GetCurrentLevelName(this, true));
-    if (CurrentLevelName.IsNone())
-    {
-        bRebootInProgress = false;
-        return;
-    }
-
-    UGameplayStatics::OpenLevel(this, CurrentLevelName);
+    OnRebooted.Broadcast(CycleManager->GetTotalCycles() + 1, Cause);
+    CycleManager->EndCycle(Cause);
 }
 
 bool APOSTGameDirector::PlayRadioMessage(FName MessageId)
 {
-    if (!Player) CacheWorldReferences();
-    if (!Player || !Player->GetRadioComponent()) return false;
+    if (!Player)
+    {
+        CacheWorldReferences();
+    }
+    if (!Player || !Player->GetRadioComponent())
+    {
+        return false;
+    }
 
     for (const FPOSTRadioMessage& Message : RadioMessages)
     {
@@ -155,7 +101,6 @@ bool APOSTGameDirector::PlayRadioMessage(FName MessageId)
     }
     return false;
 }
-
 
 bool APOSTGameDirector::ActivateAnomalyByName(FName ActorName)
 {
@@ -171,7 +116,7 @@ bool APOSTGameDirector::ActivateAnomalyByName(FName ActorName)
 
 bool APOSTGameDirector::CanStartAnomaly(const APOSTAnomaly* Anomaly) const
 {
-    if (!IsValid(Anomaly) || bRebootInProgress)
+    if (!IsValid(Anomaly) || IsRebootInProgress())
     {
         return false;
     }
@@ -188,11 +133,7 @@ bool APOSTGameDirector::CanStartAnomaly(const APOSTAnomaly* Anomaly) const
     bool bBlockingAnomalyActive = false;
     for (APOSTAnomaly* Active : ActiveAnomalies)
     {
-        if (!IsValid(Active) || !Active->IsActive())
-        {
-            continue;
-        }
-
+        if (!IsValid(Active) || !Active->IsActive()) continue;
         ++ValidActiveCount;
         bBlockingAnomalyActive |= Active->BlocksOtherAnomalies();
     }
@@ -221,7 +162,7 @@ void APOSTGameDirector::NotifyAnomalyStopped(APOSTAnomaly* Anomaly)
 
 bool APOSTGameDirector::TryActivateNearbyAnomaly()
 {
-    if (!Player || bRebootInProgress)
+    if (!Player || IsRebootInProgress())
     {
         return false;
     }
@@ -266,90 +207,13 @@ bool APOSTGameDirector::TryActivateNearbyAnomaly()
     return false;
 }
 
-bool APOSTGameDirector::SaveProgress()
-{
-    UPOSTRunSaveGame* Save = Cast<UPOSTRunSaveGame>(UGameplayStatics::CreateSaveGameObject(UPOSTRunSaveGame::StaticClass()));
-    if (!Save) return false;
-    Save->StoryStage = StoryStage;
-    Save->RebootCount = RebootCount;
-
-    Save->LastDeathCause = LastDeathCause;
-    Save->PlayedRadioMessageIds = PlayedRadioMessages.Array();
-
-    if (const APOSTGameState* GameState = GetWorld() ? GetWorld()->GetGameState<APOSTGameState>() : nullptr)
-    {
-        Save->bHasSavedWorldTime = true;
-        Save->SavedDay = GameState->GetDay();
-        Save->SavedHours = GameState->GetHours();
-        Save->SavedMinutes = GameState->GetMinutes();
-        Save->SavedSeconds = GameState->GetSeconds();
-    }
-
-    return UGameplayStatics::SaveGameToSlot(Save, SaveSlotName, SaveUserIndex);
-}
-
-bool APOSTGameDirector::LoadProgress()
-{
-    if (!UGameplayStatics::DoesSaveGameExist(SaveSlotName, SaveUserIndex)) return false;
-    UPOSTRunSaveGame* Save = Cast<UPOSTRunSaveGame>(UGameplayStatics::LoadGameFromSlot(SaveSlotName, SaveUserIndex));
-    if (!Save) return false;
-    StoryStage = Save->StoryStage;
-    RebootCount = Save->RebootCount;
-    LastDeathCause = Save->LastDeathCause;
-    bHasSavedWorldTime = Save->bHasSavedWorldTime;
-    SavedDay = FMath::Max(1, Save->SavedDay);
-    SavedHours = FMath::Clamp(Save->SavedHours, 0, 23);
-    SavedMinutes = FMath::Clamp(Save->SavedMinutes, 0, 59);
-    SavedSeconds = FMath::Clamp(Save->SavedSeconds, 0, 59);
-
-    PlayedRadioMessages.Reset();
-    for (const FName MessageId : Save->PlayedRadioMessageIds)
-    {
-        if (!MessageId.IsNone())
-        {
-            PlayedRadioMessages.Add(MessageId);
-        }
-    }
-    return true;
-}
-
-void APOSTGameDirector::ResetProgress()
-{
-    UGameplayStatics::DeleteGameInSlot(SaveSlotName, SaveUserIndex);
-    StoryStage = EPOSTStoryStage::Arrival;
-    RebootCount = 0;
-    LastDeathCause = EPOSTDeathCause::Unknown;
-    PlayedRadioMessages.Reset();
-    bHasSavedWorldTime = false;
-    SavedDay = 1;
-    SavedHours = 21;
-    SavedMinutes = 0;
-    SavedSeconds = 0;
-}
-
-
 void APOSTGameDirector::StartPresenceEncounter()
 {
-    if (PresenceState != EPOSTPresenceState::Inactive)
-    {
-        return;
-    }
-
     SetPresenceState(EPOSTPresenceState::Warning);
-
-    GetWorldTimerManager().SetTimer(
-        PresenceTimer,
-        this,
-        &APOSTGameDirector::HandlePresenceCritical,
-        TimeUntilCritical,
-        false
-    );
 }
 
 void APOSTGameDirector::StopPresenceEncounter()
 {
-    GetWorldTimerManager().ClearTimer(PresenceTimer);
-
     SetPresenceState(EPOSTPresenceState::Inactive);
 }
 
@@ -361,7 +225,5 @@ void APOSTGameDirector::SetPresenceState(EPOSTPresenceState NewState)
     }
 
     PresenceState = NewState;
-    UE_LOG(LogPOST, Warning, TEXT("Presence State: %d"), static_cast<int32>(PresenceState));
-
     OnPresenceStateChanged.Broadcast(PresenceState);
 }
