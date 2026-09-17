@@ -41,23 +41,23 @@ protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="POST|Radio")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="POST|Radio")
     USoundBase* InterferenceLoop = nullptr;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="POST|Radio", meta=(ClampMin="0.0"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="POST|Radio", meta=(ClampMin="0.0"))
     float MaximumInterferenceVolume = 0.8f;
 
     // Below this proximity the radio is mostly quiet and only gives occasional bursts.
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="POST|Radio|Entity", meta=(ClampMin="0.0", ClampMax="1.0"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="POST|Radio|Entity", meta=(ClampMin="0.0", ClampMax="1.0"))
     float ContinuousInterferenceThreshold = 0.55f;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="POST|Radio|Entity", meta=(ClampMin="0.1"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="POST|Radio|Entity", meta=(ClampMin="0.1"))
     float FarBurstMinInterval = 3.5f;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="POST|Radio|Entity", meta=(ClampMin="0.1"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="POST|Radio|Entity", meta=(ClampMin="0.1"))
     float FarBurstMaxInterval = 7.0f;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="POST|Radio|Entity", meta=(ClampMin="0.01"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="POST|Radio|Entity", meta=(ClampMin="0.01"))
     float BurstDuration = 0.18f;
 
 private:
