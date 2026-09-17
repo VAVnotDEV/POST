@@ -5,6 +5,7 @@
 #include "POSTProtectionZone.generated.h"
 
 class UBoxComponent;
+class UNavModifierComponent;
 
 UCLASS()
 class POST_API APOSTProtectionZone : public AActor
@@ -23,4 +24,9 @@ public:
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|Protection")
     UBoxComponent* ProtectionBox;
+
+    // Marks the whole protected volume as NavArea_Null. AI cannot build a path
+    // through the checkpoint, while the player can still walk through normally.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|Protection")
+    UNavModifierComponent* NavigationBlocker;
 };
