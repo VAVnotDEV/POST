@@ -4,6 +4,7 @@
 #include "Gameplay/POSTCycleManager.h"
 #include "Gameplay/POSTProtectionZone.h"
 #include "Kismet/GameplayStatics.h"
+#include "NavigationSystem.h"
 #include "Player/POSTCharacter.h"
 #include "POSTGameState.h"
 
@@ -32,8 +33,9 @@ void APOSTEntity::Tick(float DeltaTime)
         }
     }
 
+    bReceivedPlayerStimulusThisFrame = false;
     UpdatePerception(DeltaTime);
-    UpdateDecision();
+    UpdateDecision(DeltaTime);
 }
 
 void APOSTEntity::UpdatePerception(float DeltaTime)
@@ -46,7 +48,6 @@ void APOSTEntity::UpdatePerception(float DeltaTime)
 
     const float Distance = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
     const float Speed = TargetPlayer->GetVelocity().Size2D();
-    bool bReceivedStimulus = false;
 
     if (Distance <= PerceptionRadius && Speed > 5.0f)
     {
@@ -56,15 +57,12 @@ void APOSTEntity::UpdatePerception(float DeltaTime)
             GetDistanceMultiplier(Distance) * GetTimeOfDayMultiplier() * DeltaTime;
 
         Awareness = FMath::Clamp(Awareness + Gain, 0.0f, 100.0f);
-        LastKnownPlayerLocation = TargetPlayer->GetActorLocation();
-        bHasLastKnownLocation = true;
-        bReceivedStimulus = true;
+        RememberPlayerLocation(TargetPlayer->GetActorLocation());
+        bReceivedPlayerStimulusThisFrame = true;
+        return;
     }
 
-    if (!bReceivedStimulus)
-    {
-        Awareness = FMath::Max(0.0f, Awareness - AwarenessDecayPerSecond * DeltaTime);
-    }
+    Awareness = FMath::Max(0.0f, Awareness - AwarenessDecayPerSecond * DeltaTime);
 }
 
 void APOSTEntity::ReportNoise(const FVector& WorldLocation, float Strength)
@@ -77,8 +75,8 @@ void APOSTEntity::ReportNoise(const FVector& WorldLocation, float Strength)
 
     Awareness = FMath::Clamp(Awareness + 30.0f * FMath::Max(0.0f, Strength) *
         GetDistanceMultiplier(Distance) * GetTimeOfDayMultiplier(), 0.0f, 100.0f);
-    LastKnownPlayerLocation = WorldLocation;
-    bHasLastKnownLocation = true;
+    RememberPlayerLocation(WorldLocation);
+    bReceivedPlayerStimulusThisFrame = true;
 }
 
 void APOSTEntity::ReportLight(const FVector& WorldLocation, float Strength)
@@ -91,35 +89,19 @@ void APOSTEntity::ReportLight(const FVector& WorldLocation, float Strength)
 
     Awareness = FMath::Clamp(Awareness + 18.0f * FMath::Max(0.0f, Strength) *
         GetDistanceMultiplier(Distance) * GetTimeOfDayMultiplier(), 0.0f, 100.0f);
-    LastKnownPlayerLocation = WorldLocation;
-    bHasLastKnownLocation = true;
+    RememberPlayerLocation(WorldLocation);
+    bReceivedPlayerStimulusThisFrame = true;
 }
 
-void APOSTEntity::UpdateDecision()
+void APOSTEntity::UpdateDecision(float DeltaTime)
 {
     const bool bPlayerProtected = APOSTProtectionZone::IsActorProtected(this, TargetPlayer);
 
-    if (bPlayerProtected)
+    if (!bPlayerProtected && bReceivedPlayerStimulusThisFrame && Awareness >= HuntingThreshold)
     {
-        bAttackCommitted = false;
-        if (bHasLastKnownLocation && Awareness >= InterestedThreshold)
-        {
-            SetEntityState(EPOSTEntityState::Searching);
-            MoveToward(LastKnownPlayerLocation);
-        }
-        else
-        {
-            SetEntityState(EPOSTEntityState::Roaming);
-            StopEntityMovement();
-        }
-        return;
-    }
-
-    if (Awareness >= HuntingThreshold)
-    {
+        SearchTimeRemaining = 0.0f;
+        SearchMoveCooldown = 0.0f;
         SetEntityState(EPOSTEntityState::Hunting);
-        LastKnownPlayerLocation = TargetPlayer->GetActorLocation();
-        bHasLastKnownLocation = true;
         MoveToward(LastKnownPlayerLocation);
         TryAttack();
         return;
@@ -127,19 +109,25 @@ void APOSTEntity::UpdateDecision()
 
     bAttackCommitted = false;
 
-    if (Awareness >= InterestedThreshold && bHasLastKnownLocation)
+    if (bHasLastKnownLocation)
     {
-        SetEntityState(EPOSTEntityState::Searching);
-        MoveToward(LastKnownPlayerLocation);
+        if (EntityState != EPOSTEntityState::Searching)
+        {
+            BeginSearch();
+        }
+
+        UpdateSearch(DeltaTime);
         return;
     }
 
     SetEntityState(EPOSTEntityState::Roaming);
+    StopEntityMovement();
 }
 
 void APOSTEntity::TryAttack()
 {
-    if (bAttackCommitted || !TargetPlayer || APOSTProtectionZone::IsActorProtected(this, TargetPlayer))
+    if (bAttackCommitted || !TargetPlayer || !bReceivedPlayerStimulusThisFrame ||
+        APOSTProtectionZone::IsActorProtected(this, TargetPlayer))
     {
         return;
     }
@@ -158,6 +146,65 @@ void APOSTEntity::TryAttack()
     {
         CycleManager->EndCycle(EPOSTDeathCause::Entity);
     }
+}
+
+void APOSTEntity::RememberPlayerLocation(const FVector& Location)
+{
+    LastKnownPlayerLocation = Location;
+    bHasLastKnownLocation = true;
+}
+
+void APOSTEntity::BeginSearch()
+{
+    SetEntityState(EPOSTEntityState::Searching);
+    SearchTimeRemaining = SearchDuration;
+    SearchMoveCooldown = 0.0f;
+    MoveToward(LastKnownPlayerLocation);
+}
+
+void APOSTEntity::UpdateSearch(float DeltaTime)
+{
+    SearchTimeRemaining -= DeltaTime;
+    SearchMoveCooldown -= DeltaTime;
+
+    if (SearchTimeRemaining <= 0.0f || Awareness <= KINDA_SMALL_NUMBER)
+    {
+        ForgetPlayer();
+        SetEntityState(EPOSTEntityState::Roaming);
+        StopEntityMovement();
+        return;
+    }
+
+    const float DistanceToLastKnown = FVector::Dist2D(GetActorLocation(), LastKnownPlayerLocation);
+    if (DistanceToLastKnown > SearchAcceptanceRadius)
+    {
+        MoveToward(LastKnownPlayerLocation);
+        return;
+    }
+
+    if (SearchMoveCooldown > 0.0f)
+    {
+        return;
+    }
+
+    SearchMoveCooldown = SearchMoveInterval;
+
+    if (UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
+    {
+        FNavLocation SearchPoint;
+        if (NavSystem->GetRandomReachablePointInRadius(LastKnownPlayerLocation, SearchRadius, SearchPoint))
+        {
+            MoveToward(SearchPoint.Location);
+        }
+    }
+}
+
+void APOSTEntity::ForgetPlayer()
+{
+    bHasLastKnownLocation = false;
+    LastKnownPlayerLocation = FVector::ZeroVector;
+    SearchTimeRemaining = 0.0f;
+    SearchMoveCooldown = 0.0f;
 }
 
 void APOSTEntity::MoveToward(const FVector& Location)
