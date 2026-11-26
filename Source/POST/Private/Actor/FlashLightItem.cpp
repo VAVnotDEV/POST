@@ -19,7 +19,7 @@ AFlashLightItem::AFlashLightItem()
     FlashlightStaticMesh->SetGenerateOverlapEvents(false);
 
     LightComponent = CreateDefaultSubobject<USpotLightComponent>(TEXT("LightComponent"));
-    LightComponent->SetupAttachment(GetRootComponent());
+    LightComponent->SetupAttachment(LightComponent);
     LightComponent->SetIntensity(0.0f);
 }
 
