@@ -30,7 +30,11 @@ public:
 protected:
     virtual void BeginPlay() override;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|Flashlight")
+
+    //UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    //USceneComponent* DefaultRootComponent = nullptr;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="POST|Flashlight")
     UStaticMeshComponent* FlashlightStaticMesh = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="POST|Flashlight")
@@ -47,4 +51,7 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="POST|Flashlight", meta=(ClampMin="0.0"))
     float MaxIntensity = 300.0f;
+
+private:
+    FColor LightColor = FColor::FromHex(TEXT("FFC673"));
 };

@@ -12,6 +12,7 @@ AFlashLightItem::AFlashLightItem()
     PrimaryActorTick.bCanEverTick = false;
 
     RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
+    SetRootComponent(RootComponent);
 
     FlashlightStaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FlashLightStaticMesh"));
     FlashlightStaticMesh->SetupAttachment(GetRootComponent());
@@ -19,8 +20,9 @@ AFlashLightItem::AFlashLightItem()
     FlashlightStaticMesh->SetGenerateOverlapEvents(false);
 
     LightComponent = CreateDefaultSubobject<USpotLightComponent>(TEXT("LightComponent"));
-    LightComponent->SetupAttachment(LightComponent);
+    LightComponent->SetupAttachment(FlashlightStaticMesh);
     LightComponent->SetIntensity(0.0f);
+    LightComponent->SetLightColor(LightColor);
 }
 
 void AFlashLightItem::BeginPlay()
